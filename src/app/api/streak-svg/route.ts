@@ -22,26 +22,27 @@ export async function GET(request: NextRequest) {
 
     // Check cache first
     const cachedData = getCachedStreak(username);
-    let streakInfo;
-
-    if (cachedData) {
-      streakInfo = cachedData;
-    } else {
-      // Fetch new data if not in cache
+    const streakInfo = cachedData ?? (await (async () => {
       const contributionData = await fetchContributionData(username);
-      const allContributionDays = contributionData.weeks.flatMap(
-        week => week.contributionDays
+      const info = calculateStreak(
+        contributionData.contributionDays,
+        contributionData.totalContributions,
+        contributionData.createdAt
       );
-
-      streakInfo = calculateStreak(allContributionDays);
-      setCachedStreak(username, streakInfo);
-    }
+      setCachedStreak(username, info);
+      return info;
+    })());
 
     // Generate SVG
     const svg = generateStreakCard({
-      username,
+      totalContributions: streakInfo.totalContributions,
+      firstContributionDate: streakInfo.firstContributionDate,
       currentStreak: streakInfo.currentStreak,
-      lastContributionDate: streakInfo.lastContributionDate,
+      currentStreakStart: streakInfo.currentStreakStart,
+      currentStreakEnd: streakInfo.currentStreakEnd,
+      longestStreak: streakInfo.longestStreak,
+      longestStreakStart: streakInfo.longestStreakStart,
+      longestStreakEnd: streakInfo.longestStreakEnd,
       theme,
       font
     });

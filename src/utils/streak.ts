@@ -1,45 +1,115 @@
-interface StreakInfo {
-  currentStreak: number;
-  lastContributionDate: string;
+interface ContributionDay {
+  contributionCount: number;
+  date: string;
 }
 
-export function calculateStreak(contributionDays: { contributionCount: number; date: string }[]): StreakInfo {
-  let currentStreak = 0;
-  let lastContributionDate = '';
+export interface StreakInfo {
+  totalContributions: number;
+  firstContributionDate: string;
+  currentStreak: number;
+  currentStreakStart: string;
+  currentStreakEnd: string;
+  longestStreak: number;
+  longestStreakStart: string;
+  longestStreakEnd: string;
+}
 
-  // Sort contributions by date in descending order
-  const sortedDays = [...contributionDays].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
+const MS_PER_DAY = 86400000;
+
+// GitHub's contribution calendar dates are UTC calendar days ("2026-09-04").
+// All arithmetic here stays in that same UTC day-key space so it never drifts
+// against local-timezone "today", which would silently shift the boundary.
+function dateKeyToDayNumber(dateKey: string): number {
+  const [year, month, day] = dateKey.slice(0, 10).split('-').map(Number);
+  return Date.UTC(year, month - 1, day) / MS_PER_DAY;
+}
+
+function dayNumberToDateKey(dayNumber: number): string {
+  return new Date(dayNumber * MS_PER_DAY).toISOString().slice(0, 10);
+}
+
+function todayDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function calculateStreak(
+  contributionDays: ContributionDay[],
+  totalContributions: number,
+  firstContributionDate: string
+): StreakInfo {
+  const sortedDays = [...contributionDays].sort(
+    (a, b) => dateKeyToDayNumber(a.date) - dateKeyToDayNumber(b.date)
   );
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Longest streak: scan forward, tracking the run of consecutive contributed days.
+  let longestStreak = 0;
+  let longestStreakStart = '';
+  let longestStreakEnd = '';
+
+  let runStreak = 0;
+  let runStart = '';
+  let previousDayNumber: number | null = null;
 
   for (const day of sortedDays) {
-    const contributionDate = new Date(day.date);
-    contributionDate.setHours(0, 0, 0, 0);
+    const dayNumber = dateKeyToDayNumber(day.date);
 
-    // Break if we find a day with no contributions
     if (day.contributionCount === 0) {
-      break;
+      runStreak = 0;
+      runStart = '';
+      previousDayNumber = dayNumber;
+      continue;
     }
 
-    // Check if this contribution is part of the current streak
-    const dayDifference = Math.floor(
-      (today.getTime() - contributionDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (dayDifference <= currentStreak + 1) {
-      currentStreak = dayDifference === 0 ? 1 : dayDifference;
-      lastContributionDate = day.date;
+    if (runStreak > 0 && previousDayNumber !== null && dayNumber - previousDayNumber === 1) {
+      runStreak += 1;
     } else {
-      break;
+      runStreak = 1;
+      runStart = day.date;
     }
+
+    if (runStreak > longestStreak) {
+      longestStreak = runStreak;
+      longestStreakStart = runStart;
+      longestStreakEnd = day.date;
+    }
+
+    previousDayNumber = dayNumber;
   }
 
+  // Current streak: walk backwards from today (or yesterday, if today has no
+  // contribution yet) while contributions continue uninterrupted.
+  const byDate = new Map(sortedDays.map((day) => [day.date.slice(0, 10), day.contributionCount]));
+  let cursor = dateKeyToDayNumber(todayDateKey());
+
+  if (!byDate.get(dayNumberToDateKey(cursor))) {
+    cursor -= 1;
+  }
+
+  let currentStreak = 0;
+  let currentStreakEnd = '';
+
+  while (byDate.get(dayNumberToDateKey(cursor))) {
+    if (currentStreak === 0) {
+      currentStreakEnd = dayNumberToDateKey(cursor);
+    }
+    currentStreak += 1;
+    cursor -= 1;
+  }
+
+  const currentStreakStart =
+    currentStreak > 0
+      ? dayNumberToDateKey(dateKeyToDayNumber(currentStreakEnd) - (currentStreak - 1))
+      : '';
+
   return {
+    totalContributions,
+    firstContributionDate,
     currentStreak,
-    lastContributionDate
+    currentStreakStart,
+    currentStreakEnd,
+    longestStreak,
+    longestStreakStart,
+    longestStreakEnd,
   };
 }
 
@@ -58,6 +128,6 @@ export function getCachedStreak(key: string): StreakInfo | null {
 export function setCachedStreak(key: string, data: StreakInfo): void {
   cache.set(key, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
 }

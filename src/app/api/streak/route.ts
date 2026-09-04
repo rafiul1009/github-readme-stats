@@ -24,25 +24,21 @@ export async function GET(request: NextRequest) {
     // Check cache first
     const cachedData = getCachedStreak(username);
     if (cachedData) {
-      return NextResponse.json({
-        currentStreak: cachedData.currentStreak
-      });
+      return NextResponse.json(cachedData);
     }
 
     // Fetch new data if not in cache
     const contributionData = await fetchContributionData(username);
-    const allContributionDays = contributionData.weeks.flatMap(
-      week => week.contributionDays
+    const streakInfo = calculateStreak(
+      contributionData.contributionDays,
+      contributionData.totalContributions,
+      contributionData.createdAt
     );
 
-    const streakInfo = calculateStreak(allContributionDays);
-    
     // Cache the result
     setCachedStreak(username, streakInfo);
 
-    return NextResponse.json({
-      currentStreak: streakInfo.currentStreak
-    });
+    return NextResponse.json(streakInfo);
   } catch (error) {
     console.error('Error fetching streak data:', error);
     return NextResponse.json(
