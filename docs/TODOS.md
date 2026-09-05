@@ -6,7 +6,7 @@ Phase-by-phase task breakdown. Rationale for every decision is in [PLAN.md](./PL
 **Priority**: P0 (blocks the phase) · P1 (needed for the phase to be complete) · P2 (nice to have)
 
 **Shipping milestones**
-- **MVP** = Phases 0–3 (streak + stats + top-langs + pins, working widget builder, copy-out)
+- ✅ **MVP** = Phases 0–3 (streak + stats + top-langs + pins, working widget builder, copy-out) — **complete**, gist support shipped alongside pins as well
 - **v1.0** = Phases 0–5 (adds the profile README builder, i18n, and delivery modes)
 - **v1.5+** = Phases 6–10 (remaining widgets, scaling); Phase 11 is explicitly out of scope
 
@@ -75,18 +75,18 @@ without it.
 | 2.10 | ✅ Add to builder | `WIDGET_CATALOG` now lists all three widgets; added a working widget-type `<select>` to `BuilderClient` (previously a placeholder with no setter). Verified `/build?_widget=stats` and `?_widget=top-langs` both serve and list correctly. | P0 | done |
 | 2.11 | Tests | **Skipped per user instruction for this session.** Verified instead by hand against live GitHub data: hide/show row selection, hide_rank, include_all_commits vs current-year, all 5 top-langs layouts, langs_count, exclude_repo, and the size_weight/count_weight ranking reorder. A real test suite for these cases (plus rank boundary values, which weren't hand-verified) is still needed. | P1 | skipped |
 
-## Phase 3 — Repo & Gist pins → **MVP complete**
+## ✅ Phase 3 — Repo & Gist pins → **MVP complete**
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 3.1 | Repo data fetch | `owner/repo`: name, description, language + color, stars, forks, archived/template badges. | P0 | todo |
-| 3.2 | Pin card widget | GitHub-native repo-pin visual language; `show_owner`, `description_lines_count` (1–3). | P0 | todo |
-| 3.3 | Gist data fetch + card | Gist by id; `show_owner`. | P1 | todo |
-| 3.4 | Repo-category theme variants | Repo/gist cards use `_repocard` theme slot variants (per stats-extended's category model). | P1 | todo |
-| 3.5 | Builder repo/gist inputs | `owner/repo` and gist-id fields shown conditionally by widget type. | P1 | todo |
-| 3.6 | Error-state cards | Render a proper themed error card (not a 500 text body) for missing/private/malformed targets — an `<img>` cannot show text errors. | P0 | todo |
-| 3.7 | Tests | Malformed `repo=`, missing repo, private repo, long descriptions. | P1 | todo |
-| 3.8 | **MVP release prep** | Docs for shipped widgets, landing page, deploy, `.env.example`, untrack `.env.local`. | P0 | todo |
+| 3.1 | ✅ Repo data fetch | `src/lib/githubRepo.ts`: `fetchRepoData("owner/name")` — description, isArchived/isTemplate/isFork, stars, forks, primaryLanguage+color. Verified query shape and the not-found error shape against the live GraphQL API before writing the fetch code. | P0 | done |
+| 3.2 | ✅ Pin card widget | `src/widgets/pin/`: `PinCard.tsx` (repo icon, title, word-wrapped description, language dot, star/fork counts, archived/template/fork badges), `show_owner`, `description_lines_count` (1–3, auto-sized when omitted). | P0 | done |
+| 3.3 | ✅ Gist data fetch + card | Gists aren't cleanly reachable by plain ID via GraphQL, so `fetchGistData` uses the REST API directly (verified shape live) instead of forcing a GraphQL-only architecture; `GistCard.tsx` lists files with a language-color dot (`src/lib/languageColors.ts`, since gists only report a language *name*, not a color, unlike repos). `show_owner` supported. | P1 | done |
+| 3.4 | Repo-category theme variants | **Scoped out** — our theme model (8 core slots + extension-slot fallback, docs/PLAN.md §7 D4) already gives every widget type a consistent look from one preset without needing a separate `_repocard` palette family; pin/gist reuse the same core slots directly. Revisit only if a widget needs a slot with no reasonable core-slot mapping. | P1 | done (scoped down — see note) |
+| 3.5 | ✅ Builder repo/gist inputs | Generalized the builder from a hardcoded "username" field to a per-widget `identifyingField` (`username`/`repo`/`id`) driving the input's label, placeholder, and copy-panel gating — pin/gist now get "Repository"/"Gist ID" fields instead of a username box that didn't apply to them. | P1 | done |
+| 3.6 | ✅ Error-state cards | `WidgetRenderError` (`src/widgets/errors.ts`) carries a status + message from a widget's fetch/compute step; the handler renders a themed `ErrorCard` SVG (`src/components/card/ErrorCard.tsx`, word-wrapped, correct status code) for `format=svg` requests, or a plain-text error for `format=json`, applied uniformly to unknown-widget/validation/missing-field/upstream-failure cases across every widget, not just pin. Verified against a real 404 (nonexistent repo/gist) and a 400 (malformed repo, missing repo, invalid gist id). | P0 | done |
+| 3.7 | Tests | **Skipped per user instruction for this session.** Verified instead against live data/API: malformed `repo=`, missing `repo=`, nonexistent repo (404), nonexistent gist (404), invalid gist id (400), long-description word wrapping with both auto and explicit `description_lines_count`. Not exercised: an actual private repo (structurally identical to the not-found path, since GitHub's API returns the same `NOT_FOUND` type for both, but not directly observed). | P1 | skipped |
+| 3.8 | ✅ **MVP release prep** | Root `README.md` rewritten with all 5 widgets, embed examples, common + per-widget options, local dev, deploy. Landing page now links into the builder pre-selected for each widget type. `.env.example` already accurate; confirmed (again) `.env.local` is not git-tracked. | P0 | done |
 
 ## Phase 4 — Profile README builder (Pillar B)
 

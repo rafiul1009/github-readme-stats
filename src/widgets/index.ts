@@ -3,5 +3,7 @@
 import "@/widgets/streak";
 import "@/widgets/stats";
 import "@/widgets/top-langs";
+import "@/widgets/pin";
+import "@/widgets/gist";
 
 export * from "@/widgets/registry";

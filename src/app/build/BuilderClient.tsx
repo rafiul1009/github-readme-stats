@@ -12,7 +12,13 @@ import { buildQueryString, fieldValue, type FormState, type FormValue } from "./
 
 const COLOR_OVERRIDE_KEYS = ["bg_color", "title_color", "text_color", "icon_color", "border_color"];
 // Rendered by dedicated UI elsewhere on the page rather than the generic field list.
-const HANDLED_ELSEWHERE = new Set(["username", "theme", "format"]);
+// "username"/"repo"/"id" are added dynamically below via entry.identifyingField.
+const ALWAYS_HANDLED_ELSEWHERE = new Set(["theme", "format"]);
+const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: string }> = {
+  username: { label: "GitHub username", placeholder: "e.g. octocat" },
+  repo: { label: "Repository", placeholder: "owner/name" },
+  id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
+};
 const WIDGET_QUERY_KEY = "_widget";
 const PREVIEW_DEBOUNCE_MS = 250;
 
@@ -79,22 +85,26 @@ export function BuilderClient() {
 
   function handleWidgetTypeChange(type: string) {
     setWidgetType(type);
-    // Options are widget-specific and rarely transfer meaningfully across
-    // types, so only the username (and theme, since it's a shared concept
-    // every widget understands) survive a switch.
-    setForm((prev) => ({
-      username: prev.username,
-      theme: prev.theme,
-    }));
+    // Options are widget-specific (even the identifying field differs —
+    // username vs repo vs gist id) and rarely transfer meaningfully across
+    // types, so only theme, a concept every widget shares, survives a switch.
+    setForm((prev) => ({ theme: prev.theme }));
   }
 
-  const username = typeof form.username === "string" ? form.username : "";
+  const identifyingField = entry.identifyingField;
+  const identifyingValue = typeof form[identifyingField] === "string" ? (form[identifyingField] as string) : "";
+  const identifyingUi = IDENTIFYING_FIELD_LABELS[identifyingField] ?? {
+    label: identifyingField,
+    placeholder: "",
+  };
   const themeName = (fieldValue(entry.schema, form, "theme") as string) ?? "default";
   const theme = getTheme(themeName);
-  const finalQuery = buildQueryString(entry.schema, { ...form, username });
+  const finalQuery = buildQueryString(entry.schema, form);
   const finalUrl = `${origin}/api/widget/${entry.type}?${finalQuery}`;
 
-  const genericFieldNames = Object.keys(entry.schema).filter((k) => !HANDLED_ELSEWHERE.has(k));
+  const genericFieldNames = Object.keys(entry.schema).filter(
+    (k) => !ALWAYS_HANDLED_ELSEWHERE.has(k) && k !== identifyingField
+  );
 
   return (
     <div className="min-h-screen p-6 md:p-10 max-w-6xl mx-auto">
@@ -121,13 +131,13 @@ export function BuilderClient() {
           </label>
 
           <label className="block mb-4">
-            <span className="block text-xs font-medium mb-1 opacity-80">GitHub username</span>
+            <span className="block text-xs font-medium mb-1 opacity-80">{identifyingUi.label}</span>
             <input
               type="text"
               className="border rounded px-2 py-1.5 text-sm w-full bg-transparent"
-              placeholder="e.g. octocat"
-              value={username}
-              onChange={(e) => setField("username", e.target.value)}
+              placeholder={identifyingUi.placeholder}
+              value={identifyingValue}
+              onChange={(e) => setField(identifyingField, e.target.value)}
             />
           </label>
 
@@ -170,18 +180,18 @@ export function BuilderClient() {
           </div>
 
           <div className="border-t pt-3 mt-3">
-            {username ? (
+            {identifyingValue ? (
               <CopyPanel
                 imageUrl={finalUrl}
-                altText={`${username}'s GitHub ${entry.label}`}
+                altText={`${identifyingValue} — ${entry.label}`}
                 themeName={themeName}
                 themeMode={theme.mode}
                 buildUrlWithTheme={(t) =>
-                  `${origin}/api/widget/${entry.type}?${buildQueryString(entry.schema, { ...form, username, theme: t })}`
+                  `${origin}/api/widget/${entry.type}?${buildQueryString(entry.schema, { ...form, theme: t })}`
                 }
               />
             ) : (
-              <p className="text-sm opacity-60">Enter a GitHub username to generate an embeddable link.</p>
+              <p className="text-sm opacity-60">Enter {identifyingUi.label.toLowerCase()} to generate an embeddable link.</p>
             )}
           </div>
         </section>

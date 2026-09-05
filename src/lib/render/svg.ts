@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 // reachable from src/app as "importing a component that imports react-dom/server" —
 // it works correctly under the Node runtime too, not just edge.
 import { renderToStaticMarkup } from "react-dom/server.edge";
+import { ErrorCard } from "@/components/card/ErrorCard";
 
 /**
  * Serializes a widget's root <svg> JSX element to an SVG document string
@@ -36,4 +37,21 @@ export function jsonResponse(data: unknown, cacheSeconds: number): Response {
 
 export function errorResponse(message: string, status: number): Response {
   return new Response(message, { status });
+}
+
+/**
+ * Renders a themed SVG error card instead of a plain-text body (docs/TODOS.md
+ * 3.6) — an `<img>` tag embedded in a README can't display a text error
+ * response, so a failed svg-format request should still return something
+ * readable rather than a broken-image icon.
+ */
+export function svgErrorResponse(message: string, status: number): Response {
+  const svg = renderJsxToSvg(ErrorCard({ message }));
+  return new Response(svg, {
+    status,
+    headers: {
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "no-store",
+    },
+  });
 }

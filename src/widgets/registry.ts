@@ -38,6 +38,19 @@ export interface WidgetDefinition<S extends OptionSchema = OptionSchema, TData =
    * confusingly on a missing username).
    */
   mockRawData?: (options: InferOptions<S>) => TRaw;
+  /**
+   * Set to `false` for widgets not keyed by a GitHub username (e.g. the pin
+   * card, keyed by `repo`, or the gist card, keyed by `id`). Defaults to
+   * `true`. When `false`, the widget MUST also provide `dataCacheKeyBase`.
+   */
+  requiresUsername?: boolean;
+  /**
+   * The primary data-cache-key subject. Defaults to `options.username`.
+   * Override for widgets keyed by something else — e.g. the pin card
+   * returns `options.repo` so `owner/repo` becomes the cache subject
+   * instead of an (absent) username.
+   */
+  dataCacheKeyBase?: (options: InferOptions<S>) => string | undefined;
 }
 
 /**
@@ -55,6 +68,8 @@ interface ErasedWidgetDefinition {
   renderSvg: (data: unknown, options: Record<string, unknown>) => string;
   toJson: (data: unknown, options: Record<string, unknown>) => unknown;
   mockRawData?: (options: Record<string, unknown>) => unknown;
+  requiresUsername?: boolean;
+  dataCacheKeyBase?: (options: Record<string, unknown>) => string | undefined;
 }
 
 const registry = new Map<string, ErasedWidgetDefinition>();

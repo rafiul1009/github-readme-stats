@@ -1,15 +1,24 @@
 import { getWidget } from "@/widgets/registry";
 import { parseOptions, normalizeOptionsForCacheKey, OptionValidationError } from "@/lib/options";
-import { svgResponse, jsonResponse, errorResponse } from "@/lib/render/svg";
+import { svgResponse, jsonResponse, errorResponse, svgErrorResponse } from "@/lib/render/svg";
 import { getOrSetAsync, githubDataCache, renderedOutputCache } from "@/lib/cache";
+import { WidgetRenderError } from "@/widgets/errors";
 
 const DATA_CACHE_TTL_MS = 30 * 60 * 1000;
+
+function wantsJson(searchParams: URLSearchParams): boolean {
+  return searchParams.get("format") === "json";
+}
+
+function respondError(message: string, status: number, asJson: boolean): Response {
+  return asJson ? errorResponse(message, status) : svgErrorResponse(message, status);
+}
 
 /**
  * Shared entry point for every widget-serving route: the generic
  * `/api/widget/[type]` dispatcher and the back-compat streak aliases all
- * call this. One place parses options, enforces the username/token
- * preconditions, drives the two-tier cache, and shapes the response.
+ * call this. One place parses options, enforces preconditions, drives the
+ * two-tier cache, and shapes the response.
  */
 export async function handleWidgetRequest(
   type: string,
@@ -17,7 +26,7 @@ export async function handleWidgetRequest(
 ): Promise<Response> {
   const widget = getWidget(type);
   if (!widget) {
-    return errorResponse(`Unknown widget type "${type}"`, 404);
+    return respondError(`Unknown widget type "${type}"`, 404, wantsJson(searchParams));
   }
 
   let options: Record<string, unknown>;
@@ -25,24 +34,31 @@ export async function handleWidgetRequest(
     options = parseOptions(widget.schema, searchParams) as unknown as Record<string, unknown>;
   } catch (error) {
     if (error instanceof OptionValidationError) {
-      return errorResponse(error.message, 400);
+      return respondError(error.message, 400, wantsJson(searchParams));
     }
     throw error;
   }
 
+  const format = (options.format as string | undefined) ?? "svg";
+  const asJson = format === "json";
+
   const username = options.username as string | undefined;
-  if (!username) {
-    return errorResponse("username parameter is required", 400);
+  if (widget.requiresUsername !== false && !username) {
+    return respondError("username parameter is required", 400, asJson);
   }
 
   if (!process.env.GITHUB_TOKEN) {
-    return errorResponse("GitHub token is not configured", 500);
+    return respondError("GitHub token is not configured", 500, asJson);
+  }
+
+  const cacheKeyBase = widget.dataCacheKeyBase ? widget.dataCacheKeyBase(options) : username;
+  if (!cacheKeyBase) {
+    return respondError(`${type} widget requires an identifying parameter`, 400, asJson);
   }
 
   const cacheSeconds = (options.cache_seconds as number | undefined) ?? widget.cacheSecondsDefault;
-  const format = (options.format as string | undefined) ?? "svg";
   const suffix = widget.dataCacheKeySuffix?.(options);
-  const dataCacheKey = suffix ? `${type}:${username}:${suffix}` : `${type}:${username}`;
+  const dataCacheKey = suffix ? `${type}:${cacheKeyBase}:${suffix}` : `${type}:${cacheKeyBase}`;
 
   try {
     const raw = await getOrSetAsync(githubDataCache, dataCacheKey, DATA_CACHE_TTL_MS, () =>
@@ -62,7 +78,9 @@ export async function handleWidgetRequest(
     return svgResponse(svg, cacheSeconds);
   } catch (error) {
     console.error(`Error rendering widget "${type}":`, error);
-    return errorResponse(`Failed to render ${type} widget`, 500);
+    const message = error instanceof WidgetRenderError ? error.message : `Failed to render ${type} widget`;
+    const status = error instanceof WidgetRenderError ? error.status : 500;
+    return respondError(message, status, asJson);
   }
 }
 
@@ -77,11 +95,11 @@ export async function handleWidgetRequest(
 export async function handlePreviewRequest(type: string, searchParams: URLSearchParams): Promise<Response> {
   const widget = getWidget(type);
   if (!widget) {
-    return errorResponse(`Unknown widget type "${type}"`, 404);
+    return respondError(`Unknown widget type "${type}"`, 404, wantsJson(searchParams));
   }
 
   if (!widget.mockRawData) {
-    return errorResponse(`Widget "${type}" has no preview data available`, 501);
+    return respondError(`Widget "${type}" has no preview data available`, 501, wantsJson(searchParams));
   }
 
   let options: Record<string, unknown>;
@@ -89,18 +107,19 @@ export async function handlePreviewRequest(type: string, searchParams: URLSearch
     options = parseOptions(widget.schema, searchParams) as unknown as Record<string, unknown>;
   } catch (error) {
     if (error instanceof OptionValidationError) {
-      return errorResponse(error.message, 400);
+      return respondError(error.message, 400, wantsJson(searchParams));
     }
     throw error;
   }
 
   const format = (options.format as string | undefined) ?? "svg";
+  const asJson = format === "json";
 
   try {
     const raw = widget.mockRawData(options);
     const data = widget.computeData(raw, options);
 
-    if (format === "json") {
+    if (asJson) {
       return jsonResponse(widget.toJson(data, options), 0);
     }
 
@@ -110,6 +129,8 @@ export async function handlePreviewRequest(type: string, searchParams: URLSearch
     });
   } catch (error) {
     console.error(`Error rendering preview for widget "${type}":`, error);
-    return errorResponse(`Failed to render ${type} preview`, 500);
+    const message = error instanceof WidgetRenderError ? error.message : `Failed to render ${type} preview`;
+    const status = error instanceof WidgetRenderError ? error.status : 500;
+    return respondError(message, status, asJson);
   }
 }

@@ -2,11 +2,15 @@ import type { OptionSchema } from "@/lib/options";
 import { STREAK_SCHEMA } from "@/widgets/streak/schema";
 import { STATS_SCHEMA } from "@/widgets/stats/schema";
 import { TOP_LANGS_SCHEMA } from "@/widgets/top-langs/schema";
+import { PIN_SCHEMA } from "@/widgets/pin/schema";
+import { GIST_SCHEMA } from "@/widgets/gist/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
   label: string;
   schema: OptionSchema;
+  /** The schema field that identifies what to fetch — "username" for most widgets, "repo"/"id" for pin/gist. */
+  identifyingField: string;
 }
 
 /**
@@ -16,9 +20,11 @@ export interface WidgetCatalogEntry {
  * this as new widgets are added in later phases.
  */
 export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
-  { type: "streak", label: "Contribution Streak", schema: STREAK_SCHEMA },
-  { type: "stats", label: "Stats Overview", schema: STATS_SCHEMA },
-  { type: "top-langs", label: "Top Languages", schema: TOP_LANGS_SCHEMA },
+  { type: "streak", label: "Contribution Streak", schema: STREAK_SCHEMA, identifyingField: "username" },
+  { type: "stats", label: "Stats Overview", schema: STATS_SCHEMA, identifyingField: "username" },
+  { type: "top-langs", label: "Top Languages", schema: TOP_LANGS_SCHEMA, identifyingField: "username" },
+  { type: "pin", label: "Pinned Repository", schema: PIN_SCHEMA, identifyingField: "repo" },
+  { type: "gist", label: "Gist", schema: GIST_SCHEMA, identifyingField: "id" },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {
