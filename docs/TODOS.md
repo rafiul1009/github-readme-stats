@@ -59,21 +59,21 @@ without it.
 | 1.14 | ✅ Permalink / URL state | Debounced `history.replaceState` mirrors form state into the page's own query string (plus a `_widget` marker); `BuilderClient` seeds initial state from `useSearchParams()` on load, so deep links restore. | P1 | done |
 | 1.15 | Streak unit tests | **Skipped per user instruction for this session.** Correctness was instead verified by hand against live GitHub data for every new option (mode, exclude_days monotonicity, timezone, starting_year) plus structural checks (divider count, hidden-column re-centering, gradient defs, no double-escaping) — see session notes. A real test suite covering these same cases is still needed before this phase can be considered fully closed. | P1 | skipped |
 
-## Phase 2 — Stats overview + Top languages
+## ✅ Phase 2 — Stats overview + Top languages
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 2.1 | Extend GraphQL layer | Stars, commits, PRs (opened/merged), issues, reviews, discussions, contributed-to repos, followers. | P0 | todo |
-| 2.2 | Rank algorithm | `src/lib/rank.ts`: weighted percentile → S/A+/A/A-/B+/B/B-/C+/C. Publish the formula in docs. | P0 | todo |
-| 2.3 | Stats card widget | `hide=stars,commits,prs,issues,contribs`; `show=reviews,discussions_started,discussions_answered,prs_merged,prs_merged_percentage`; `show_icons`, `hide_rank`, `rank_icon=default\|github\|percentile`, `include_all_commits`, `line_height`, `text_bold`, `ring_color`, `number_format`. | P0 | todo |
-| 2.4 | Language aggregation | Per-repo language bytes + repo counts, aggregated; first-100-repo limit documented. | P0 | todo |
-| 2.5 | Language ranking algorithm | `(bytes ^ size_weight) * (repo_count ^ count_weight)`, exposed via `size_weight` / `count_weight`. | P1 | todo |
-| 2.6 | Top-langs: `normal` + `compact` | Bar list and stacked-bar-with-legend layouts. | P0 | todo |
-| 2.7 | Top-langs: `donut`, `donut-vertical`, `pie` | Multi-segment arc rendering via `<path>`/`<circle>` — available directly under D1. | P1 | todo |
-| 2.8 | Top-langs options | `langs_count` (1–20), `hide` (languages), `exclude_repo`, `hide_progress`, `card_width`, `custom_title`. | P1 | todo |
-| 2.9 | Mock data both widgets | Sample datasets for preview. | P0 | todo |
-| 2.10 | Add to builder | Widget selector gains both; schema-driven forms render automatically. | P0 | todo |
-| 2.11 | Tests | Rank boundaries, language percentage math, weight algorithm, hide/show parsing. | P1 | todo |
+| 2.1 | ✅ Extend GraphQL layer | `src/lib/githubStats.ts`: stars/forks (summed from up to 100 owned non-fork repos), PRs opened/merged, issues (open+closed), reviews, discussions started/answered, contributed-to repos, followers, current-year and (on request) all-time commits. Every field name verified against the live GraphQL API before writing the query, not guessed. | P0 | done |
+| 2.2 | ✅ Rank algorithm | `src/lib/rank.ts`: weighted exponential/log-normal CDFs across commits/PRs/issues/reviews/stars/followers → 0-100 percentile (lower is better) → S/A+/A/A-/B+/B/B-/C+/C. Own published weights/medians (documented in-file) rather than unverifiable upstream constants — matches D6's *approach*, not a byte-for-byte copy. | P0 | done |
+| 2.3 | ✅ Stats card widget | `src/widgets/stats/`: `hide`, `show` (reviews/discussions_started/discussions_answered/prs_merged/prs_merged_percentage), `show_icons` (original geometric glyph set, not a reproduced icon font), `hide_rank`, `rank_icon=default\|github\|percentile`, `include_all_commits`, `line_height`, `text_bold`, `ring_color`, `number_format`. Verified against live data incl. hide/show/theme/hide_rank combinations. | P0 | done |
+| 2.4 | ✅ Language aggregation | `src/lib/languages.ts` + the query's per-repo `languages(first:10)`; first-100-repo limit documented in code. | P0 | done |
+| 2.5 | ✅ Language ranking algorithm | `(bytes ^ size_weight) * (repo_count ^ count_weight)` in `aggregateLanguages`; verified `count_weight=1&size_weight=0` reorders results (CSS overtakes low-repo-count languages) against live data. | P1 | done |
+| 2.6 | ✅ Top-langs: `normal` + `compact` | `src/widgets/top-langs/TopLangsCard.tsx`. | P0 | done |
+| 2.7 | ✅ Top-langs: `donut`, `donut-vertical`, `pie` | `src/lib/arc.ts` (standard polar-to-cartesian pie/donut path geometry) + per-layout renderers; all 5 layouts verified rendering with distinct, correct viewBox/content against live data. | P1 | done |
+| 2.8 | ✅ Top-langs options | `langs_count`, `hide`, `exclude_repo`, `hide_progress`, `card_width` (default 300), `custom_title` — verified `exclude_repo` and `langs_count` change output against live data. | P1 | done |
+| 2.9 | ✅ Mock data both widgets | `src/widgets/stats/mock.ts`, `src/widgets/top-langs/mock.ts`; both feed the same `/api/widget/[type]/preview` route built in Phase 1. | P0 | done |
+| 2.10 | ✅ Add to builder | `WIDGET_CATALOG` now lists all three widgets; added a working widget-type `<select>` to `BuilderClient` (previously a placeholder with no setter). Verified `/build?_widget=stats` and `?_widget=top-langs` both serve and list correctly. | P0 | done |
+| 2.11 | Tests | **Skipped per user instruction for this session.** Verified instead by hand against live GitHub data: hide/show row selection, hide_rank, include_all_commits vs current-year, all 5 top-langs layouts, langs_count, exclude_repo, and the size_weight/count_weight ranking reorder. A real test suite for these cases (plus rank boundary values, which weren't hand-verified) is still needed. | P1 | skipped |
 
 ## Phase 3 — Repo & Gist pins → **MVP complete**
 

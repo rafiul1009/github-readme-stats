@@ -76,7 +76,10 @@ export function parseOptions<S extends OptionSchema>(
     const raw = searchParams.get(name);
 
     if (raw === null || raw === "") {
-      result[name] = def.default;
+      // InferOptions promises commaList always resolves to string[] (never
+      // undefined), so an unset one without an explicit default must still
+      // fall back to [] here rather than leaving the type a lie at runtime.
+      result[name] = def.type === "commaList" ? (def.default ?? []) : def.default;
       continue;
     }
 

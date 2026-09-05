@@ -41,7 +41,8 @@ export async function handleWidgetRequest(
 
   const cacheSeconds = (options.cache_seconds as number | undefined) ?? widget.cacheSecondsDefault;
   const format = (options.format as string | undefined) ?? "svg";
-  const dataCacheKey = `${type}:${username}`;
+  const suffix = widget.dataCacheKeySuffix?.(options);
+  const dataCacheKey = suffix ? `${type}:${username}:${suffix}` : `${type}:${username}`;
 
   try {
     const raw = await getOrSetAsync(githubDataCache, dataCacheKey, DATA_CACHE_TTL_MS, () =>

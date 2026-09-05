@@ -1,5 +1,7 @@
 import type { OptionSchema } from "@/lib/options";
 import { STREAK_SCHEMA } from "@/widgets/streak/schema";
+import { STATS_SCHEMA } from "@/widgets/stats/schema";
+import { TOP_LANGS_SCHEMA } from "@/widgets/top-langs/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
@@ -15,6 +17,8 @@ export interface WidgetCatalogEntry {
  */
 export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   { type: "streak", label: "Contribution Streak", schema: STREAK_SCHEMA },
+  { type: "stats", label: "Stats Overview", schema: STATS_SCHEMA },
+  { type: "top-langs", label: "Top Languages", schema: TOP_LANGS_SCHEMA },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {

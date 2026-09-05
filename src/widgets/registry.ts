@@ -6,15 +6,27 @@ export interface WidgetDefinition<S extends OptionSchema = OptionSchema, TData =
   /** Default Cache-Control max-age, in seconds, unless overridden by the cache_seconds option. */
   cacheSecondsDefault: number;
   /**
-   * Fetches upstream data. Cached under `${type}:${username}` — this MUST
-   * NOT vary with any option other than username, or requests differing
-   * only in another option will incorrectly receive a stale cached result.
-   * Any option that changes what's fetched from GitHub (not just how it's
-   * displayed/derived) needs its own cache-key strategy — not yet needed by
-   * any registered widget (tracked for repo/owner/role scoping in
-   * docs/TODOS.md Phase 10.3).
+   * Fetches upstream data. Cached under `${type}:${username}[:suffix]` — see
+   * `dataCacheKeySuffix` below. Any option NOT reflected in that key must
+   * have no effect on what this function fetches, or requests differing
+   * only in that option will incorrectly receive each other's cached
+   * result (this exact bug hit the streak widget's mode/exclude_days/
+   * timezone/starting_year options during Phase 1 — they were fixed by
+   * moving them out of fetchRawData into computeData instead, which is
+   * the preferred fix whenever the option only changes *derivation*, not
+   * *what's fetched*).
    */
   fetchRawData: (options: InferOptions<S>) => Promise<TRaw>;
+  /**
+   * Extends the data cache key beyond `${type}:${username}` for widgets
+   * where some option genuinely changes what fetchRawData requests from
+   * GitHub (e.g. the stats widget's include_all_commits, which triggers an
+   * extra, more expensive query). Most widgets don't need this — prefer
+   * keeping options out of fetchRawData entirely (via computeData) when
+   * possible, and reach for this only when the option truly changes the
+   * upstream request itself.
+   */
+  dataCacheKeySuffix?: (options: InferOptions<S>) => string;
   /** Cheap, pure derivation from raw data + the full option set. Never cached — recomputed on every request. */
   computeData: (raw: TRaw, options: InferOptions<S>) => TData;
   renderSvg: (data: TData, options: InferOptions<S>) => string;
@@ -38,6 +50,7 @@ interface ErasedWidgetDefinition {
   schema: OptionSchema;
   cacheSecondsDefault: number;
   fetchRawData: (options: Record<string, unknown>) => Promise<unknown>;
+  dataCacheKeySuffix?: (options: Record<string, unknown>) => string;
   computeData: (raw: unknown, options: Record<string, unknown>) => unknown;
   renderSvg: (data: unknown, options: Record<string, unknown>) => string;
   toJson: (data: unknown, options: Record<string, unknown>) => unknown;

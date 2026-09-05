@@ -34,7 +34,7 @@ function initFormFromSearchParams(schema: OptionSchema, searchParams: URLSearchP
 
 export function BuilderClient() {
   const searchParams = useSearchParams();
-  const [widgetType] = useState(searchParams.get(WIDGET_QUERY_KEY) || WIDGET_CATALOG[0].type);
+  const [widgetType, setWidgetType] = useState(searchParams.get(WIDGET_QUERY_KEY) || WIDGET_CATALOG[0].type);
   const entry = getWidgetCatalogEntry(widgetType) ?? WIDGET_CATALOG[0];
 
   const [form, setForm] = useState<FormState>(() => initFormFromSearchParams(entry.schema, searchParams));
@@ -77,6 +77,17 @@ export function BuilderClient() {
     });
   }
 
+  function handleWidgetTypeChange(type: string) {
+    setWidgetType(type);
+    // Options are widget-specific and rarely transfer meaningfully across
+    // types, so only the username (and theme, since it's a shared concept
+    // every widget understands) survive a switch.
+    setForm((prev) => ({
+      username: prev.username,
+      theme: prev.theme,
+    }));
+  }
+
   const username = typeof form.username === "string" ? form.username : "";
   const themeName = (fieldValue(entry.schema, form, "theme") as string) ?? "default";
   const theme = getTheme(themeName);
@@ -94,6 +105,21 @@ export function BuilderClient() {
 
       <div className="grid md:grid-cols-2 gap-8">
         <section>
+          <label className="block mb-4">
+            <span className="block text-xs font-medium mb-1 opacity-80">Widget</span>
+            <select
+              className="border rounded px-2 py-1.5 text-sm w-full bg-transparent"
+              value={entry.type}
+              onChange={(e) => handleWidgetTypeChange(e.target.value)}
+            >
+              {WIDGET_CATALOG.map((w) => (
+                <option key={w.type} value={w.type}>
+                  {w.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="block mb-4">
             <span className="block text-xs font-medium mb-1 opacity-80">GitHub username</span>
             <input
