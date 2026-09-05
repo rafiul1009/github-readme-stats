@@ -134,3 +134,16 @@ export function colorValueToCss(value: ColorValue): string {
   // (e.g. inline style attributes outside the SVG's own <defs>).
   return value.stops[0] ?? "transparent";
 }
+
+/**
+ * Normalizes a raw query-param color value (e.g. a `title_color`/`text_color`/
+ * `icon_color`/`border_color` override) into a single CSS color string.
+ * Gradients aren't meaningful for these single-purpose slots, so a gradient
+ * input falls back to its first stop (see colorValueToCss). Use
+ * `parseColorValue` directly instead when the slot should support gradients
+ * (currently only `bg_color`, handled by the Card primitive).
+ */
+export function normalizeOverrideColor(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return colorValueToCss(parseColorValue(raw));
+}

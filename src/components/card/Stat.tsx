@@ -1,5 +1,3 @@
-import { escapeXml } from "@/lib/escape";
-
 export interface StatProps {
   x: number;
   y: number;
@@ -38,7 +36,7 @@ export function Stat({
         fontWeight={700}
         fontSize={valueFontSize}
       >
-        {escapeXml(String(value))}
+        {value}
       </text>
       <text
         x={0}
@@ -49,7 +47,7 @@ export function Stat({
         fontWeight={400}
         fontSize={labelFontSize}
       >
-        {escapeXml(label)}
+        {label}
       </text>
     </g>
   );

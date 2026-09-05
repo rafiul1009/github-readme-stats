@@ -44,9 +44,10 @@ export async function handleWidgetRequest(
   const dataCacheKey = `${type}:${username}`;
 
   try {
-    const data = await getOrSetAsync(githubDataCache, dataCacheKey, DATA_CACHE_TTL_MS, () =>
-      widget.fetchData(options)
+    const raw = await getOrSetAsync(githubDataCache, dataCacheKey, DATA_CACHE_TTL_MS, () =>
+      widget.fetchRawData(options)
     );
+    const data = widget.computeData(raw, options);
 
     if (format === "json") {
       return jsonResponse(widget.toJson(data, options), cacheSeconds);
@@ -61,5 +62,53 @@ export async function handleWidgetRequest(
   } catch (error) {
     console.error(`Error rendering widget "${type}":`, error);
     return errorResponse(`Failed to render ${type} widget`, 500);
+  }
+}
+
+/**
+ * Powers the builder's live preview: renders a widget from its bundled
+ * mock data instead of calling GitHub, so editing options is instant and
+ * free (docs/PLAN.md §5 — "preview from sample data" is what makes a
+ * live-updating options form viable without burning rate limit). No
+ * username or GITHUB_TOKEN required, and nothing is cached — mock renders
+ * are already cheap.
+ */
+export async function handlePreviewRequest(type: string, searchParams: URLSearchParams): Promise<Response> {
+  const widget = getWidget(type);
+  if (!widget) {
+    return errorResponse(`Unknown widget type "${type}"`, 404);
+  }
+
+  if (!widget.mockRawData) {
+    return errorResponse(`Widget "${type}" has no preview data available`, 501);
+  }
+
+  let options: Record<string, unknown>;
+  try {
+    options = parseOptions(widget.schema, searchParams) as unknown as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof OptionValidationError) {
+      return errorResponse(error.message, 400);
+    }
+    throw error;
+  }
+
+  const format = (options.format as string | undefined) ?? "svg";
+
+  try {
+    const raw = widget.mockRawData(options);
+    const data = widget.computeData(raw, options);
+
+    if (format === "json") {
+      return jsonResponse(widget.toJson(data, options), 0);
+    }
+
+    const svg = widget.renderSvg(data, options);
+    return new Response(svg, {
+      headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" },
+    });
+  } catch (error) {
+    console.error(`Error rendering preview for widget "${type}":`, error);
+    return errorResponse(`Failed to render ${type} preview`, 500);
   }
 }

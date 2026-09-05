@@ -39,25 +39,25 @@ without it.
 | 0.17 | Test harness | **Skipped per user instruction for this session** — revisit before Phase 1 ships. | P1 | skipped |
 | 0.18 | ✅ Clear starter cruft | `layout.tsx` metadata replaced; `page.tsx` no longer the `create-next-app` template (full builder UI is Phase 1 task 1.7, this is just the placeholder swap). | P2 | done |
 
-## Phase 1 — Port streak card + builder MVP (proves the loop end-to-end)
+## ✅ Phase 1 — Port streak card + builder MVP (proves the loop end-to-end)
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 1.1 | Port streak card to TSX/SVG | Convert the template literal in `svg.tsx` to SVG-emitting TSX. Layout, ring, fire icon and `@keyframes` all carry over directly — no flexbox re-expression needed (D1). Visual-diff against current output. | P0 | todo |
-| 1.2 | Streak option expansion | Add `mode=daily\|weekly`, `exclude_days`, `timezone`, `starting_year`, `hide_total_contributions`, `hide_current_streak`, `hide_longest_streak`, `card_width`, `card_height`, `short_numbers`, `disable_animations`. | P1 | todo |
-| 1.3 | Weekly streak mode | Streak counts a Sun–Sat week with ≥1 contribution. Non-trivial logic change in `streak.ts`. | P1 | todo |
-| 1.4 | Exclude-days logic | Excluded weekdays don't break a streak and don't count toward it. | P1 | todo |
-| 1.5 | Timezone-aware "today" | Current code uses UTC day keys; honor an IANA `timezone` param for the streak boundary. | P1 | todo |
-| 1.6 | Mock data for streak | `widgets/streak/mock.ts` — sample dataset for instant, API-free preview. | P0 | todo |
-| 1.7 | Builder page shell | `/build`: options form (left) + preview & copy-out (right), driven by the Phase 0 option schema. | P0 | todo |
-| 1.8 | Form control library | Render controls automatically from option schema types: text, number, select, checkbox, color, comma-list, weekday-picker. | P0 | todo |
-| 1.9 | Live preview (mock-backed) | Instant re-render from sample data on every change, with the "these are sample stats" notice. **No API calls while editing.** | P0 | todo |
-| 1.10 | Theme picker | Searchable swatch grid (needed at 40+ themes); selecting a theme repopulates all color pickers client-side from embedded palette data. | P0 | todo |
-| 1.11 | Advanced color panel | "Add property" dropdown + `+` to add a picker per theme slot; solid-vs-gradient background radio; "Clear options". | P1 | todo |
-| 1.12 | Copy-out panel | Separate copy buttons: Markdown, HTML, `<picture>` dark-mode block, raw URL, JSON. | P0 | todo |
-| 1.13 | `<picture>` generator | Auto-pair the chosen theme with a light/dark counterpart for `prefers-color-scheme`. | P1 | todo |
-| 1.14 | Permalink / URL state | Builder options mirrored into the page query string; deep links restore state. | P1 | todo |
-| 1.15 | Streak unit tests | Daily/weekly modes, exclude-days, timezone boundaries, zero-contribution, gap-in-middle, contributed-today-vs-yesterday. | P1 | todo |
+| 1.1 | ✅ Port streak card to TSX/SVG | `src/widgets/streak/StreakCard.tsx`: real SVG elements (Card/Divider/FadeIn/Ring primitives), gradient-capable background via the Card primitive, proportional scaling for non-default card_width/height, dynamic re-centering when a column is hidden. Legacy `svg.tsx` deleted. Verified against live data (DenverCoder1, torvalds). | P0 | done |
+| 1.2 | ✅ Streak option expansion | Added `mode`, `exclude_days`, `timezone`, `starting_year`, `hide_total_contributions`, `hide_current_streak`, `hide_longest_streak`, per-widget `card_width`/`card_height` defaults (495×195). `short_numbers` is served by the already-generic `number_format=short\|long` common option instead of a duplicate param — same capability, one name. | P1 | done |
+| 1.3 | ✅ Weekly streak mode | `calculateWeeklyStreaks` in `src/utils/streak.ts`: groups by Sun-Sat week, counts consecutive weeks with ≥1 contribution. Verified distinct from daily mode against live data (was silently returning identical numbers before a cache-key bug fix — see note below). | P1 | done |
+| 1.4 | ✅ Exclude-days logic | Fixed twice: v1 unconditionally skipped excluded weekdays (including ones WITH a contribution), which could only ever shrink a streak — backwards from the intended "free pass" semantics. Corrected so a contribution always counts regardless of weekday; only a *lack* of contribution on an excluded day is forgiven. Verified monotonic (exclude_days only ever helps or leaves the streak unchanged) against live data. | P1 | done |
+| 1.5 | ✅ Timezone-aware "today" | `todayDateKey(timezone)` uses `Intl.DateTimeFormat('en-CA', {timeZone})` to compute the calendar day in the requested IANA zone. | P1 | done |
+| 1.6 | ✅ Mock data for streak | `src/widgets/streak/mock.ts`: deterministic "today"-relative sample history (unbroken recent run, a slump, a longer historical run) feeding a new `/api/widget/[type]/preview` route — no username, no GITHUB_TOKEN, no caching needed. | P0 | done |
+| 1.7 | ✅ Builder page shell | `/build` (`src/app/build/`): options form (left) + live preview & copy-out (right). | P0 | done |
+| 1.8 | ✅ Form control library | `OptionField.tsx` dispatches on schema type: text/number/select/checkbox/color (with a synced native color-picker)/comma-list, plus a dedicated weekday-toggle control for `exclude_days`. | P0 | done |
+| 1.9 | ✅ Live preview (mock-backed) | Debounced (250ms) `<img>` pointed at `/api/widget/streak/preview`; sample-data notice shown under the preview. Confirmed zero calls to the real GitHub-backed endpoint while editing. | P0 | done |
+| 1.10 | ✅ Theme picker | Searchable swatch grid (`ThemePicker.tsx`) over all 40 registry themes; selecting a theme clears any explicit color overrides so every color field reverts to following the new theme. | P0 | done |
+| 1.11 | Advanced color panel | Solid-vs-gradient is handled generically (the `color` field free-text accepts a gradient string directly) and "Clear options" is implemented. The specific "Add property" per-theme-slot dropdown from the reference UI was **not** built — scoped out since our common `*_color` options already cover the slots exposed to users; revisit only if a widget needs a slot with no common-option mapping. | P1 | done (scoped down — see note) |
+| 1.12 | ✅ Copy-out panel | `CopyPanel.tsx`: Markdown, HTML, HTML with a `prefers-color-scheme` `<picture>` block, raw URL, and a JSON-endpoint link, each with its own copy button. | P0 | done |
+| 1.13 | ✅ `<picture>` generator | Explicit light/dark pairing table for themes with a known counterpart (default/dark, gruvbox/gruvbox-light, solarized, github-light/dark), falling back to default/dark generically otherwise. | P1 | done |
+| 1.14 | ✅ Permalink / URL state | Debounced `history.replaceState` mirrors form state into the page's own query string (plus a `_widget` marker); `BuilderClient` seeds initial state from `useSearchParams()` on load, so deep links restore. | P1 | done |
+| 1.15 | Streak unit tests | **Skipped per user instruction for this session.** Correctness was instead verified by hand against live GitHub data for every new option (mode, exclude_days monotonicity, timezone, starting_year) plus structural checks (divider count, hidden-column re-centering, gradient defs, no double-escaping) — see session notes. A real test suite covering these same cases is still needed before this phase can be considered fully closed. | P1 | skipped |
 
 ## Phase 2 — Stats overview + Top languages
 

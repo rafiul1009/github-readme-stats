@@ -1,5 +1,3 @@
-import { escapeXml } from "@/lib/escape";
-
 export interface TitleProps {
   x: number;
   y: number;
@@ -21,7 +19,7 @@ export function Title({ x, y, text, color, fontFamily, fontSize = 18, textAnchor
       fontWeight={700}
       fontSize={fontSize}
     >
-      {escapeXml(text)}
+      {text}
     </text>
   );
 }

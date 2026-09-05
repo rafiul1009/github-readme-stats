@@ -1,43 +1,54 @@
-import { fetchContributionData } from "@/lib/github";
+import { fetchContributionData, type FullContributionData } from "@/lib/github";
 import { calculateStreak, type StreakInfo } from "@/utils/streak";
-import { generateStreakCard } from "@/components/svg";
-import { COMMON_OPTIONS, mergeSchemas, type InferOptions } from "@/lib/options";
+import { getTheme } from "@/lib/themes";
 import { registerWidget } from "@/widgets/registry";
+import { renderJsxToSvg } from "@/lib/render/svg";
+import { StreakCard } from "./StreakCard";
+import { getMockContributionData } from "./mock";
+import { STREAK_SCHEMA, type StreakOptions } from "./schema";
 
-/**
- * Streak widget: registered against the new dispatcher so `/api/streak-svg`
- * and `/api/streak` (docs/TODOS.md 0.14) run through the shared cache and
- * option-parsing pipeline. Rendering still delegates to the legacy
- * generateStreakCard template-literal renderer, which only understands a
- * 'light' | 'dark' theme — its TSX port onto the full theme registry is
- * docs/TODOS.md Phase 1, tasks 1.1-1.2, not part of the Phase 0 platform work.
- */
-const STREAK_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
-  font: {
-    type: "string",
-    description: "Font family used in the card text.",
-    default: "Inter",
-  },
-} as const);
+// Fetches only what depends on username, so this is safe to cache under
+// `streak:<username>` regardless of mode/exclude_days/timezone/starting_year
+// — those affect computeStreakData below, which is never cached.
+async function fetchStreakRawData(options: StreakOptions): Promise<FullContributionData> {
+  return fetchContributionData(options.username);
+}
 
-export type StreakOptions = InferOptions<typeof STREAK_SCHEMA>;
-
-async function fetchStreakData(options: StreakOptions): Promise<StreakInfo> {
-  const contributionData = await fetchContributionData(options.username);
-  return calculateStreak(
-    contributionData.contributionDays,
-    contributionData.totalContributions,
-    contributionData.createdAt
-  );
+function computeStreakData(raw: FullContributionData, options: StreakOptions): StreakInfo {
+  return calculateStreak(raw.contributionDays, raw.totalContributions, raw.createdAt, {
+    mode: options.mode,
+    excludeDays: options.exclude_days,
+    timezone: options.timezone || undefined,
+    startingYear: options.starting_year || undefined,
+  });
 }
 
 function renderStreakSvg(data: StreakInfo, options: StreakOptions): string {
-  // Back-compat shim: the legacy renderer only recognizes 'light'/'dark'.
-  // Any other theme name (now valid ecosystem-wide) falls back to 'light'
-  // here rather than erroring, which is strictly more permissive than the
-  // pre-existing behavior it replaces.
-  const mode: "light" | "dark" = options.theme === "dark" ? "dark" : "light";
-  return generateStreakCard({ ...data, theme: mode, font: options.font });
+  return renderJsxToSvg(
+    StreakCard({
+      ...data,
+      mode: options.mode,
+      theme: getTheme(options.theme),
+      overrides: {
+        background: options.bg_color,
+        border: options.border_color,
+        icon: options.icon_color,
+        title: options.title_color,
+        text: options.text_color,
+      },
+      font: options.font,
+      numberFormat: options.number_format,
+      hideTotalContributions: options.hide_total_contributions,
+      hideCurrentStreak: options.hide_current_streak,
+      hideLongestStreak: options.hide_longest_streak,
+      disableAnimations: options.disable_animations,
+      hideBorder: options.hide_border,
+      borderRadius: options.border_radius,
+      borderWidth: options.border_width,
+      width: options.card_width,
+      height: options.card_height,
+    })
+  );
 }
 
 function streakToJson(data: StreakInfo): unknown {
@@ -48,7 +59,11 @@ registerWidget({
   type: "streak",
   schema: STREAK_SCHEMA,
   cacheSecondsDefault: 3600,
-  fetchData: fetchStreakData,
+  fetchRawData: fetchStreakRawData,
+  computeData: computeStreakData,
   renderSvg: renderStreakSvg,
   toJson: streakToJson,
+  mockRawData: () => getMockContributionData(),
 });
+
+export type { StreakOptions } from "./schema";

@@ -30,9 +30,10 @@ export async function GET(request: NextRequest) {
     }
 
     const options: Record<string, unknown> = { username };
-    const data = await getOrSetAsync(githubDataCache, `streak:${username}`, DATA_CACHE_TTL_MS, () =>
-      widget.fetchData(options)
+    const raw = await getOrSetAsync(githubDataCache, `streak:${username}`, DATA_CACHE_TTL_MS, () =>
+      widget.fetchRawData(options)
     );
+    const data = widget.computeData(raw, options);
 
     return NextResponse.json(widget.toJson(data, options));
   } catch (error) {
