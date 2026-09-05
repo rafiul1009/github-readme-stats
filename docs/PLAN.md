@@ -324,13 +324,13 @@ src/
     gallery/page.tsx             # themed showcase
     page.tsx                     # landing
   widgets/<name>/                # one folder per widget
-    render.tsx                   #   JSX → Satori
+    render.tsx                   #   TSX → SVG elements
     options.ts                   #   declarative option schema (drives API + UI form)
     data.ts                      #   its GraphQL/REST needs
     mock.ts                      #   sample data for instant preview
   lib/
-    render/satori.ts             # Satori wrapper + font loading
-    render/png.ts                # resvg rasterization
+    render/svg.ts                # renderToStaticMarkup wrapper + SVG doc shell
+    render/png.ts                # resvg rasterization (Phase 7, Node-only)
     themes/                      # preset registry (slot-based)
     options/                     # shared schema, parsing, validation, coercion
     color.ts                     # hex/alpha/named/gradient parsing
@@ -346,10 +346,11 @@ parsing and validation, the builder UI form controls, the docs table, and the UR
 Without it, 15 widgets × ~25 options each becomes unmaintainable — and it is the reason
 the earlier plan's "add a checkbox per option" approach would not have scaled.
 
-**Rendering**: Satori (already a dependency) renders JSX→SVG. Constraint: Satori is
-flexbox-only with limited CSS support, so animations and gradients are injected into the
-emitted SVG post-render (the same technique the current streak card uses for its
-`@keyframes`). PNG via `resvg-js`. JSON short-circuits rendering entirely.
+**Rendering** (see D1): widgets are TSX components emitting real SVG elements, serialized
+by `renderToStaticMarkup` from `react-dom/server` — already a dependency. Full SVG is
+available: `<circle>`, `<path>`, arcs, masks, `clipPath`, gradient `<defs>`, `<style>`
+keyframes. JSON short-circuits rendering entirely. PNG (Phase 7) rasterizes the same SVG
+via `resvg-js` on the Node runtime.
 
 **Caching**: two tiers — raw GitHub data keyed by `username` + query-shape, and rendered
 output keyed by the **full normalized option set**. Module-level `Map` initially, with a
@@ -368,23 +369,158 @@ scaling lever. Mock-data previews mean the builder itself costs zero API calls.
 
 ---
 
-## 7. Risks and open questions
+## 7. Decisions
 
-- **Satori's layout constraints** are the biggest technical unknown. The streak card's
-  current pixel-positioned layout must be re-expressed in flexbox. Budget real time in
-  Phase 1 and validate visual parity before porting anything else. If Satori proves too
-  limiting for chart-shaped widgets (donut/pie/graph), those may need direct SVG
-  generation — decide per widget rather than forcing one engine everywhere.
-- **Theme count vs. slot design.** Getting the shared-core-slot + widget-specific-slot
-  fallback right is what makes 170 themes tractable. If this is designed wrong, every new
-  widget requires touching every theme. Design it in Phase 0, not later.
-- **Rank and trophy thresholds are subjective** — every reference project tunes them
-  differently. Pick one documented formula and publish it rather than chasing parity.
-- **Scope.** This is a large plan. Phases 0–3 constitute a genuinely useful product
-  (streak + stats + languages + pins + a working builder); everything after is additive.
-  Do not let Tier 2/3 widgets block shipping Pillar A.
-- **Legal/attribution**: several widget concepts (trophies, activity graph, summary cards)
-  originate in MIT/Apache projects. We are reimplementing behaviour, not copying code —
-  but themes and trophy names lifted verbatim should carry attribution.
+The open questions from the previous draft are resolved below. Each states the decision,
+the evidence, and the cost of being wrong.
+
+### D1 — Rendering: JSX → SVG via `renderToStaticMarkup`. **Not Satori.**
+
+**This reverses the earlier decision to migrate to Satori**, which was made when the only
+supporting argument was "the dependency is already installed". That was weak, and the
+evidence now points clearly the other way.
+
+Evidence:
+- **None of the six mature generator projects use Satori.** A repo-wide search for
+  `satori` / `@vercel/og` across all ten reference folders returns exactly one hit: our own
+  `package.json`, where it is unused. Six independent projects solving precisely this
+  problem converged on direct SVG generation.
+- **Satori cannot draw the shapes half our widgets need.** It renders a flexbox subset of
+  HTML — `div`, `span`, `img` — and has no `<circle>`, `<path>`, `<polyline>`, or arc
+  support. That rules out: the streak ring, top-languages donut/donut-vertical/pie, the
+  trophy next-rank arcs, the activity line/area graph, and the contribution heatmap. The
+  successor project `github-stats-extended` renders with exactly these primitives
+  (`<g>`, `<circle>`, `<path>`, `<text>`, `<rect>`) — the ones Satori lacks.
+- Satori has no CSS `@keyframes`, so animations would be post-injected into the output
+  anyway — surrendering the authoring benefit that motivated the choice.
+- Satori requires font binaries loaded as buffers (bundle weight, runtime constraints) and
+  by default converts text to filled paths, inflating output and destroying text
+  selectability and accessibility.
+
+**Decision**: author cards as **TSX components that render real SVG elements**, serialized
+with `renderToStaticMarkup` from `react-dom/server`. React 19 and `react-dom` are already
+dependencies, so this adds none.
+
+This keeps the actual intent behind the original choice — *JSX authoring instead of
+unmaintainable template-literal strings* — while giving full access to SVG: arcs, masks,
+`clipPath`, gradients, `<style>` keyframes, and `<animate>`. Text stays as `<text>`, so
+output is small, selectable, and accessible.
+
+**Consequences**: remove `satori` and `@vercel/og` from `package.json`. The Phase 0
+feasibility spike is no longer needed and is deleted. No per-widget engine split — one
+engine renders every widget.
+
+**If wrong**: JSX-to-SVG is a thin, well-understood serialization step; the escape hatch
+(dropping to template strings for one widget) is local and cheap.
+
+### D2 — Runtime: Node everywhere. Drop `runtime = 'edge'`.
+
+The edge declaration on `/api/streak-svg` is a latent deployment hazard flagged in the
+original project docs, and it constrains the GraphQL client, font handling, and any future
+rasterization. Cards are cached and CDN-fronted, so edge's cold-start advantage is
+marginal — a cache hit never reaches the runtime at all.
+
+**Decision**: Node runtime for all routes; lean on `Cache-Control` + CDN for latency.
+
+### D3 — Output formats: SVG and JSON at v1.0. PNG deferred to Phase 7.
+
+SVG is what GitHub READMEs actually render (via camo), and JSON is free — it skips
+rendering entirely. PNG is the *only* format requiring bundled font binaries and a native
+`resvg-js` binary, and it is the least used.
+
+**Decision**: SVG + JSON are first-class from Phase 0. PNG lands in Phase 7, Node-only,
+with animations auto-disabled. XML/WebP/GIF are not planned.
+
+### D4 — Theme slots: 8 core slots, widget extensions fall back to core.
+
+Concrete model, decided now so it cannot drift:
+
+```
+Core (every widget, every theme MUST define): background, border, title, text, icon,
+                                              accent, stroke, muted
+Widget extensions (OPTIONAL, per theme):      ring, fire, currStreakNum, sideNums,
+                                              currStreakLabel, sideLabels, dates, …
+```
+
+Resolution order for any slot: explicit query override → theme's widget-specific slot →
+theme's mapped core slot → widget default. Every widget-specific slot declares its core
+fallback once (`ring → accent`, `fire → accent`, `sideLabels → muted`, …).
+
+This is what makes N themes × M widgets tractable: a theme author defines 8 values and
+every widget works; a theme *may* refine specific slots. Without the fallback chain, each
+new widget would require editing every theme.
+
+### D5 — Theme count: 40 curated at v1.0, not 170.
+
+Themes are cheap to add and expensive to verify — each must be checked against every
+widget for contrast and legibility. 170 unverified themes is worse than 40 good ones,
+especially since D4's fallback chain means late additions cost nothing architecturally.
+
+**Decision**: ship ~40 well-known presets at v1.0 (the ones users actually name: dark,
+radical, tokyonight, dracula, gruvbox, onedark, catppuccin×4, nord, synthwave, github-*,
+transparent, highcontrast, …), with a documented contribution path and incremental
+expansion toward ecosystem parity afterward.
+
+### D6 — Rank formula: adopt the established one; publish it.
+
+**Decision**: use the upstream approach — a weighted percentile combining commits, PRs,
+reviews, issues, stars, and followers through log-normal/exponential CDFs, producing
+S/A+/A/A-/B+/B/B-/C+/C — and expose `rank_icon=default|github|percentile`.
+
+Inventing our own formula would make our rank disagree with the card users already have in
+their README, which reads as a bug, not a feature. The exact weights get published in the
+docs so the number is auditable.
+
+### D7 — Trophy thresholds: adopt upstream values verbatim, with attribution.
+
+Same reasoning as D6, more strongly: trophy ranks are directly comparable across services,
+and a user whose `SS` becomes an `A` on our card will assume we are broken.
+
+### D8 — Sequencing: build the profile builder *before* widgets 5–15.
+
+**This reorders the plan.** The README builder (Pillar B) moves from Phase 8 to **Phase 4**,
+ahead of the activity graph, trophies, badges, and icons.
+
+Rationale: the builder is the differentiator — no reference project pairs a first-party
+widget engine with a full README generator — and it delivers more value on top of four
+solid widgets than a fifth widget delivers with no builder. It also de-risks the widest
+part of the design (multi-widget composition, shared theming, full-README export) while
+the widget count is still small enough to change course cheaply.
+
+**MVP** stays Phases 0–3. **v1.0** becomes Phases 0–4 plus i18n and delivery modes.
+
+### D9 — Param naming: mirror upstream names exactly.
+
+**Decision**: use the established names (`hide`, `show`, `bg_color`, `title_color`,
+`hide_border`, `layout`, `langs_count`, `custom_title`, …) even where we would choose
+better ones. Users migrate between these services by swapping a domain in a URL; name
+compatibility makes us a drop-in target and makes every existing tutorial apply to us.
+
+### D10 — Licensing: MIT, plus a `NOTICE` file.
+
+We are reimplementing behaviour, not copying code — but theme palettes, trophy thresholds,
+the rank formula, and the parameter vocabulary are all derived from MIT-licensed upstream
+projects. **Decision**: ship MIT with a `NOTICE` crediting DenverCoder1
+(streak-stats), anuraghazra (github-readme-stats), ryo-ma (profile-trophy), and the other
+projects surveyed in §2.
+
+---
+
+## 8. Residual risks
+
+Genuine unknowns that remain after the decisions above.
+
+- **GitHub API rate limits under real traffic.** Mock-data previews remove the builder's
+  cost, but a popular hosted instance still burns 5,000 points/hour per token. Mitigation
+  is layered (render cache → data cache → token rotation → the GitHub Action path, which
+  moves cost off our infrastructure entirely). This is the most likely thing to force
+  architectural change, and Phase 10 exists for it.
+- **First-100-repos ceiling** on language and repo aggregation is a GitHub API constraint
+  every reference project hits. It will produce complaints from users with large accounts.
+  Document it prominently rather than pretending it's solved.
+- **Visitor counter needs durable storage** (Phase 8.4 depends on Phase 10.1). If durable
+  storage slips, that one widget slips with it — no other widget shares the dependency.
+- **Contribution data has an up-to-24-hour lag** on GitHub's side. Users reliably report
+  this as a bug in the streak card. Surface it in the FAQ before launch.
 
 See [TODOS.md](./TODOS.md) for the phase-by-phase task breakdown.
