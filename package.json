@@ -10,11 +10,9 @@
   },
   "dependencies": {
     "@octokit/graphql": "^8.2.2",
-    "@vercel/og": "^0.6.8",
     "next": "15.3.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "satori": "^0.12.2"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

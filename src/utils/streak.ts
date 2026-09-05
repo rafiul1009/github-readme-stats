@@ -112,22 +112,3 @@ export function calculateStreak(
     longestStreakEnd,
   };
 }
-
-// Cache implementation
-const cache = new Map<string, { data: StreakInfo; timestamp: number }>();
-const CACHE_TTL = 3600000; // 1 hour in milliseconds
-
-export function getCachedStreak(key: string): StreakInfo | null {
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-  return null;
-}
-
-export function setCachedStreak(key: string, data: StreakInfo): void {
-  cache.set(key, {
-    data,
-    timestamp: Date.now(),
-  });
-}

@@ -16,28 +16,28 @@ without it.
 
 ---
 
-## Phase 0 — Foundations (blocks everything)
+## ✅ Phase 0 — Foundations (blocks everything)
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 0.1 | Declarative option schema | `src/lib/options/`: a typed schema format (name, type, default, min/max, enum, description) that one declaration drives — API parsing, UI form controls, docs tables, URL building. **Keystone of the whole design.** | P0 | todo |
-| 0.2 | Option parser + validator | Coercion, clamping, enum validation, comma-list parsing, sane errors for bad input. | P0 | todo |
-| 0.3 | Color value parser | `src/lib/color.ts`: 6-digit hex, 8-digit hex with alpha, CSS color names, gradient `angle,c1,...,cN`. | P0 | todo |
-| 0.4 | Theme slot model | Shared core slots (`background`, `border`, `title`, `text`, `icon`, `accent`, `stroke`, `muted`) + optional widget-specific slots with fallback to core. Get this right or every new widget touches every theme. | P0 | todo |
-| 0.5 | Theme registry (initial 40) | `src/lib/themes/`: port the most-used presets (default, dark, radical, merko, gruvbox, tokyonight, onedark, cobalt, synthwave, dracula, nord, catppuccin×4, github-*, transparent, highcontrast, …). | P0 | todo |
-| 0.6 | Theme override resolution | Layered merge: widget defaults → preset → per-slot overrides → structural options. | P0 | todo |
-| 0.7 | SVG render pipeline | `src/lib/render/svg.ts`: TSX→SVG via `renderToStaticMarkup` (`react-dom/server`), SVG document shell, `<defs>`/`<style>` injection. Per **D1**. | P0 | todo |
-| 0.8 | Drop `satori` + `@vercel/og` | Remove both from `package.json` — unused, and superseded by D1. | P0 | todo |
-| 0.9 | Shared JSX primitives | `src/components/card/`: `Card`, `Row`, `Stat`, `Ring`, `Bar`, `Divider`, `Icon`, `Title` — all theme-slot driven. | P0 | todo |
+| 0.1 | ✅ Declarative option schema | `src/lib/options/schema.ts`: typed `OptionDef`/`OptionSchema` (string/number/boolean/enum/color/commaList) + `InferOptions<S>` type inference + `mergeSchemas`. | P0 | done |
+| 0.2 | ✅ Option parser + validator | `src/lib/options/parse.ts`: `parseOptions()` coerces/clamps/validates against a schema, `OptionValidationError` on bad input, `normalizeOptionsForCacheKey()` for stable cache keys. | P0 | done |
+| 0.3 | ✅ Color value parser | `src/lib/color.ts`: 6-digit hex, 8-digit hex with alpha, CSS color names, `angle,c1,...,cN` gradients. | P0 | done |
+| 0.4 | ✅ Theme slot model | `src/lib/themes/slots.ts`: 8 core slots + `EXTENSION_FALLBACKS` map + `resolveThemeSlot`/`resolveThemeSlots`. | P0 | done |
+| 0.5 | ✅ Theme registry (initial 40) | `src/lib/themes/registry.ts`: 40 presets (default, dark, radical, merko, gruvbox×2, tokyonight, onedark, cobalt×2, synthwave, dracula, nord, monokai, solarized×2, catppuccin×4, github-*×3, vue×2, shades-of-purple, nightowl, gotham, material-palenight, ayu-mirage, midnight-purple, calm, react, blueberry, dark-aura, panda, rose-pine, algolia, swift, transparent, highcontrast). | P0 | done |
+| 0.6 | ✅ Theme override resolution | Covered by 0.4's `resolveThemeSlots` (theme → extension slot → core fallback); per-request query overrides wired in as each widget consumes it (see streak widget shim). | P0 | done |
+| 0.7 | ✅ SVG render pipeline | `src/lib/render/svg.ts`: `renderJsxToSvg()` via `renderToStaticMarkup` from `react-dom/server.edge` (the plain `react-dom/server` entry trips Next's app-router bundler check — see code comment), plus `svgResponse`/`jsonResponse`/`errorResponse`. Per **D1**. | P0 | done |
+| 0.8 | ✅ Drop `satori` + `@vercel/og` | Removed from `package.json`. | P0 | done |
+| 0.9 | ✅ Shared JSX primitives | `src/components/card/`: `Card`, `Divider`, `FadeIn`, `Stat`, `Ring`, `Title` built and in use by the streak port. `Row`/`Bar`/`Icon` deferred until the widgets that need them (Phase 2/3 stats & top-langs cards). | P0 | done (partial — remaining primitives added on demand) |
 | 0.10 | ~~PNG output~~ | **Moved to Phase 7 per D3** — PNG is the only format needing font binaries + a native `resvg` build. SVG + JSON are first-class. | — | n/a |
-| 0.11 | Two-tier cache | `src/lib/cache.ts`: raw-data cache (by username + query shape) + rendered-output cache (by full normalized options). Document the serverless cold-start limitation + KV upgrade path. | P0 | todo |
-| 0.12 | `cache_seconds` param | Per-request cache header control, clamped 21600–86400. | P2 | todo |
-| 0.13 | Unified widget route | `src/app/api/widget/[type]/route.ts` dispatcher + widget registry. | P0 | todo |
-| 0.14 | Back-compat aliases | `/api/streak-svg` and `/api/streak` keep working, delegating to the new dispatcher. Non-negotiable — existing embeds must not break. | P0 | todo |
-| 0.15 | Escaping utility | Extract `escapeXml` from `svg.tsx` into `src/lib/escape.ts`; enforce for every user-controlled string. | P0 | todo |
-| 0.16 | Remove `runtime = 'edge'` | Node runtime on all routes per **D2**; rely on `Cache-Control` + CDN for latency. | P1 | todo |
-| 0.17 | Test harness | Vitest + a snapshot helper for SVG output. No test runner exists today. | P1 | todo |
-| 0.18 | Clear starter cruft | Replace `create-next-app` boilerplate in `page.tsx` / `layout.tsx` metadata. | P2 | todo |
+| 0.11 | ✅ Two-tier cache | `src/lib/cache.ts`: `TtlCache` + `githubDataCache` (30 min TTL) + `renderedOutputCache` (per-request TTL) + `getOrSetAsync`. Cold-start/KV-upgrade limitation documented in the file header. | P0 | done |
+| 0.12 | ✅ `cache_seconds` param | In `COMMON_OPTIONS` (`src/lib/options/common.ts`), clamped 21600–86400, wired into `handleWidgetRequest`. | P2 | done |
+| 0.13 | ✅ Unified widget route | `src/app/api/widget/[type]/route.ts` dispatcher + `src/widgets/registry.ts` (type-erased registry) + `src/widgets/handler.ts` (shared request handling). | P0 | done |
+| 0.14 | ✅ Back-compat aliases | `/api/streak-svg` and `/api/streak` now delegate to the same widget + shared data cache; verified against live GitHub data — identical response shapes, status codes, and cache key as before. | P0 | done |
+| 0.15 | ✅ Escaping utility | `src/lib/escape.ts`; `svg.tsx`'s local copy removed in favor of the shared one. | P0 | done |
+| 0.16 | ✅ Remove `runtime = 'edge'` | Dropped — the rewritten routes no longer declare it; all routes run on the Node runtime per **D2**. | P1 | done |
+| 0.17 | Test harness | **Skipped per user instruction for this session** — revisit before Phase 1 ships. | P1 | skipped |
+| 0.18 | ✅ Clear starter cruft | `layout.tsx` metadata replaced; `page.tsx` no longer the `create-next-app` template (full builder UI is Phase 1 task 1.7, this is just the placeholder swap). | P2 | done |
 
 ## Phase 1 — Port streak card + builder MVP (proves the loop end-to-end)
 

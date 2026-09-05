@@ -1,3 +1,5 @@
+import { escapeXml } from '@/lib/escape';
+
 interface ThemeColors {
   background: string;
   border: string;
@@ -54,15 +56,6 @@ function formatWithYear(dateStr: string): string {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
 }
 
 function dateRangeLabel(start: string, end: string, isCurrent: boolean): string {
