@@ -17,6 +17,8 @@ widgets plus your identity, socials, and tech stack into one complete `README.md
 | Top Languages | `/api/widget/top-langs` | `?username=octocat&layout=donut` |
 | Pinned Repository | `/api/widget/pin` | `?repo=octocat/Hello-World` |
 | Gist | `/api/widget/gist` | `?id=<gist_id>` |
+| Contribution Activity Graph | `/api/widget/activity-graph` | `?username=octocat&graph_style=area` |
+| Contribution Heatmap | `/api/widget/heatmap` | `?username=octocat&weeks=53` |
 
 Every widget accepts `format=svg` (default), `format=json` (raw computed data, no
 rendering), or `format=png` (rasterized, Node-only, animations forced off).
@@ -78,6 +80,18 @@ one; default `M j[, Y]`).
 
 Pin: `repo=owner/name` (required), `show_owner`, `description_lines_count` (1-3, auto
 if omitted). Gist: `id=<gist_id>` (required), `show_owner`.
+
+### Activity-graph-specific options
+
+`days` (14-3650, default 365) — how much history to plot; `granularity=auto|day|week|month`
+(auto picks daily/weekly/monthly bucketing based on `days`); `graph_style=line|area|bar`;
+`show_points` (marker at each point, line/area only); `hide_grid`.
+
+### Heatmap-specific options
+
+`weeks` (4-260, default 53) — how many Sun-Sat weeks of history to show, ending on the
+current week; `hide_month_labels`, `hide_weekday_labels`, `hide_legend`. Cell size (and
+so the card's height) is derived from `card_width` and `weeks`.
 
 ## Local development
 

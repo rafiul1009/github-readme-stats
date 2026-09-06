@@ -128,16 +128,18 @@ Verified: `tsc --noEmit` and `next build` both clean; dev server smoke-tested �
 
 Verified: `tsc --noEmit` and `next build` both clean throughout; dev-server smoke tests covered locale/RTL rendering (Arabic streak card inspected byte-for-byte), PNG output for all 5 widgets, and back-compat aliases. Automated tests skipped per user instruction for this session, consistent with Phases 0–4.
 
-## Phase 6 — Contribution graphs
+## ✅ Phase 6 — Contribution graphs
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 6.1 | Activity graph widget | Contributions-over-time line/area chart; configurable date range, point/line/area style, grid toggle. | P0 | todo |
-| 6.2 | Contribution heatmap | GitHub-style calendar grid; color-scale driven by theme slots. | P0 | todo |
-| 6.3 | Graph axis/label system | Month/day labels, locale-aware, RTL-safe. | P1 | todo |
-| 6.4 | Animated variants | Opt-in draw-on animation via `<animate>`; disabled for PNG. | P2 | todo |
-| 6.5 | Builder + mock data | | P0 | todo |
-| 6.6 | Tests | Range boundaries, empty history, single-day history. | P1 | todo |
+| 6.1 | ✅ Activity graph widget | `src/widgets/activity-graph/`: `days` (14-3650) controls the plotted range; `graph_style=line\|area\|bar`; `show_points`; `hide_grid`. `src/lib/activity.ts`'s `aggregateActivity()` buckets the same full contribution history the streak widget fetches (own cache namespace, per the existing per-widget-type cache convention) — every day in range contributes to a bucket even at 0, so zero-activity stretches show as a genuine dip rather than a gap. | P0 | done |
+| 6.2 | ✅ Contribution heatmap | `src/widgets/heatmap/`: `src/lib/heatmap.ts`'s `buildHeatmapGrid()` builds `weeks` (4-260) Sun-Sat columns ending on the current week, quantized into a 5-level color scale by quartiles of the user's own non-zero days (adapts to how active they are, rather than fixed absolute thresholds) — rendered as accent-tinted (`#RRGGBBAA` alpha stops) cells over the theme's border/background slots, so any of the 40 presets works without a dedicated heatmap palette. Cell size (and the card's height) derives from `card_width`/`weeks` rather than being independently set. | P0 | done |
+| 6.3 | ✅ Graph axis/label system | `src/lib/i18n/dateFormat.ts` gained `monthShortLabel`/`weekdayShortLabel` (UTC-anchored `Intl.DateTimeFormat`, consistent with the UTC day-key bucketing both widgets use). X-axis/month labels auto-thin to ≤6 evenly-spaced points on the activity graph; RTL support reuses the same `<Card rtl>` + `<RtlMirror>` mechanism as every other widget — verified on a rendered Arabic activity graph (correct mirrored transforms + correct Arabic label). | P1 | done |
+| 6.4 | ✅ Animated variants | New shared primitive `src/components/card/DrawOnPath.tsx`: a `pathLength={100}` + `stroke-dasharray`/`stroke-dashoffset` `<animate>` "draws" the activity graph's line/area stroke on load — a plain SVG `<animate>` element (not a CSS `@keyframes` block) since the pathLength trick only works that way. `disabled` (from `disable_animations`, and forced automatically for `format=png` per Phase 5's existing PNG handling) renders the path fully drawn with no animation element. | P2 | done |
+| 6.5 | ✅ Builder + mock data | `src/lib/mockContributions.ts`: a shared deterministic seasonal-wave generator (kept separate from the streak widget's own hand-shaped mock, so tuning one can't break the other) feeds both new widgets' `mock.ts`. Both added to `WIDGET_CATALOG` and verified serving at `/build?_widget=activity-graph` and `?_widget=heatmap`. | P0 | done |
+| 6.6 | Tests | **Skipped per user instruction for this session.** Verified instead by hand: all 3 graph styles, `show_points`, `hide_grid`, `days` from 30 to 1000 (crossing all three auto-granularities), `weeks` from 20 to 53, `format=json`/`svg`/`png` for both widgets, and RTL rendering (`locale=ar`/`he`) — structurally inspected (element counts, transform values, integer card height) via curl against the dev server, not screenshot-verified. | P1 | skipped |
+
+Verified: `tsc --noEmit` and `next build` clean; dev-server smoke tests covered both widgets across styles, locales (including RTL), and all three output formats (SVG/JSON/PNG). Automated tests skipped per user instruction, consistent with prior phases.
 
 ## Phase 7 — Trophies & profile summary family
 

@@ -5,5 +5,7 @@ import "@/widgets/stats";
 import "@/widgets/top-langs";
 import "@/widgets/pin";
 import "@/widgets/gist";
+import "@/widgets/activity-graph";
+import "@/widgets/heatmap";
 
 export * from "@/widgets/registry";

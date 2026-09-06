@@ -1,5 +1,6 @@
 export * from "./Card";
 export * from "./Divider";
+export * from "./DrawOnPath";
 export * from "./ErrorCard";
 export * from "./FadeIn";
 export * from "./Stat";

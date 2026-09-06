@@ -36,7 +36,11 @@ export type LabelKey =
   | "fork"
   | "moreFile"
   | "moreFiles"
-  | "couldNotRenderWidget";
+  | "couldNotRenderWidget"
+  | "activityGraphTitle"
+  | "heatmapTitle"
+  | "less"
+  | "more";
 
 export const EN_CATALOG: Record<LabelKey, string> = {
   totalContributions: "Total Contributions",
@@ -64,6 +68,10 @@ export const EN_CATALOG: Record<LabelKey, string> = {
   moreFile: "+{n} more file",
   moreFiles: "+{n} more files",
   couldNotRenderWidget: "Could not render widget",
+  activityGraphTitle: "Contribution Activity",
+  heatmapTitle: "Contribution Heatmap",
+  less: "Less",
+  more: "More",
 };
 
 type PartialCatalog = Partial<Record<LabelKey, string>>;
@@ -95,6 +103,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} archivo más",
     moreFiles: "+{n} archivos más",
     couldNotRenderWidget: "No se pudo renderizar el widget",
+    activityGraphTitle: "Actividad de Contribuciones",
+    heatmapTitle: "Mapa de Calor de Contribuciones",
+    less: "Menos",
+    more: "Más",
   },
   fr: {
     totalContributions: "Contributions Totales",
@@ -122,6 +134,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} fichier de plus",
     moreFiles: "+{n} fichiers de plus",
     couldNotRenderWidget: "Impossible d'afficher le widget",
+    activityGraphTitle: "Activité des Contributions",
+    heatmapTitle: "Carte de Chaleur des Contributions",
+    less: "Moins",
+    more: "Plus",
   },
   de: {
     totalContributions: "Beiträge Gesamt",
@@ -149,6 +165,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} weitere Datei",
     moreFiles: "+{n} weitere Dateien",
     couldNotRenderWidget: "Widget konnte nicht gerendert werden",
+    activityGraphTitle: "Beitragsaktivität",
+    heatmapTitle: "Beitrags-Heatmap",
+    less: "Weniger",
+    more: "Mehr",
   },
   "pt-BR": {
     totalContributions: "Total de Contribuições",
@@ -176,6 +196,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} arquivo a mais",
     moreFiles: "+{n} arquivos a mais",
     couldNotRenderWidget: "Não foi possível renderizar o widget",
+    activityGraphTitle: "Atividade de Contribuições",
+    heatmapTitle: "Mapa de Calor de Contribuições",
+    less: "Menos",
+    more: "Mais",
   },
   it: {
     totalContributions: "Contributi Totali",
@@ -203,6 +227,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} altro file",
     moreFiles: "+{n} altri file",
     couldNotRenderWidget: "Impossibile renderizzare il widget",
+    activityGraphTitle: "Attività dei Contributi",
+    heatmapTitle: "Mappa di Calore dei Contributi",
+    less: "Meno",
+    more: "Più",
   },
   ru: {
     totalContributions: "Всего вкладов",
@@ -230,6 +258,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+ещё {n} файл",
     moreFiles: "+ещё {n} файлов",
     couldNotRenderWidget: "Не удалось отобразить виджет",
+    activityGraphTitle: "Активность вкладов",
+    heatmapTitle: "Тепловая карта вкладов",
+    less: "Меньше",
+    more: "Больше",
   },
   ja: {
     totalContributions: "総コントリビューション数",
@@ -257,6 +289,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "他{n}件のファイル",
     moreFiles: "他{n}件のファイル",
     couldNotRenderWidget: "ウィジェットを表示できませんでした",
+    activityGraphTitle: "コントリビューション活動",
+    heatmapTitle: "コントリビューションヒートマップ",
+    less: "少ない",
+    more: "多い",
   },
   ko: {
     totalContributions: "총 기여 수",
@@ -284,6 +320,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "파일 {n}개 더보기",
     moreFiles: "파일 {n}개 더보기",
     couldNotRenderWidget: "위젯을 렌더링할 수 없습니다",
+    activityGraphTitle: "기여 활동",
+    heatmapTitle: "기여 히트맵",
+    less: "적음",
+    more: "많음",
   },
   "zh-CN": {
     totalContributions: "总贡献数",
@@ -311,6 +351,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "还有{n}个文件",
     moreFiles: "还有{n}个文件",
     couldNotRenderWidget: "无法渲染组件",
+    activityGraphTitle: "贡献活动",
+    heatmapTitle: "贡献热力图",
+    less: "较少",
+    more: "较多",
   },
   ar: {
     totalContributions: "إجمالي المساهمات",
@@ -338,6 +382,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} ملف إضافي",
     moreFiles: "+{n} ملفات إضافية",
     couldNotRenderWidget: "تعذر عرض العنصر",
+    activityGraphTitle: "نشاط المساهمات",
+    heatmapTitle: "خريطة حرارة المساهمات",
+    less: "أقل",
+    more: "أكثر",
   },
   hi: {
     totalContributions: "कुल योगदान",
@@ -365,6 +413,10 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} और फ़ाइल",
     moreFiles: "+{n} और फ़ाइलें",
     couldNotRenderWidget: "विजेट प्रस्तुत नहीं किया जा सका",
+    activityGraphTitle: "योगदान गतिविधि",
+    heatmapTitle: "योगदान हीटमैप",
+    less: "कम",
+    more: "ज्यादा",
   },
   tr: {
     totalContributions: "Toplam Katkı",
@@ -392,5 +444,9 @@ export const CATALOGS: Record<string, PartialCatalog> = {
     moreFile: "+{n} dosya daha",
     moreFiles: "+{n} dosya daha",
     couldNotRenderWidget: "Widget oluşturulamadı",
+    activityGraphTitle: "Katkı Aktivitesi",
+    heatmapTitle: "Katkı Isı Haritası",
+    less: "Az",
+    more: "Çok",
   },
 };

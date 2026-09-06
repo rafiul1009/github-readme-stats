@@ -61,3 +61,27 @@ export function formatDatePattern(date: Date, pattern: string, locale: string, r
   const withBrackets = pattern.replace(/\[([^\]]*)\]/g, (_, inner: string) => (includeBracket ? inner : ""));
   return expandTokens(withBrackets, date, locale);
 }
+
+/**
+ * UTC-anchored month/weekday labels for the activity graph and heatmap
+ * widgets (Phase 6, tasks 6.1/6.2/6.3) — those widgets bucket contribution
+ * days by UTC calendar date (matching the day-key convention already used
+ * for streak calculation, see src/utils/streak.ts), so labels use `timeZone:
+ * "UTC"` too rather than the host's local time zone, to stay consistent with
+ * which calendar day a given data point actually represents.
+ */
+export function monthShortLabel(date: Date, locale: string): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" }).format(date);
+  }
+}
+
+export function weekdayShortLabel(date: Date, locale: string): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("en", { weekday: "short", timeZone: "UTC" }).format(date);
+  }
+}
