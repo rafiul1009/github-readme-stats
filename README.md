@@ -30,6 +30,11 @@ widgets plus your identity, socials, and tech stack into one complete `README.md
 | Typing Header | `/api/widget/typing-header` | `?lines=Hi, I'm Octocat,I build things` |
 | WakaTime Stats | `/api/widget/wakatime` | `?username=<wakatime-username>` |
 | Quote / Joke | `/api/widget/quote` | `?category=programming` |
+| Contribution Skyline (3D) | `/api/widget/skyline` | `?username=octocat&weeks=26` |
+| Medium Articles | `/api/widget/medium` | `?username=<medium-username>` |
+| Stack Overflow | `/api/widget/stackoverflow` | `?user_id=<numeric-id>` |
+| npm Downloads | `/api/widget/npm-downloads` | `?package=react` |
+| Stargazers / Forks | `/api/widget/roster` | `?repo=octocat/Hello-World&kind=stargazers` |
 
 There's also a standalone `/api/widget/icon/<simple-icons-slug>` route (e.g.
 `/api/widget/icon/react?color=fff&size=32`) for a single bundled tech icon outside the
@@ -193,10 +198,41 @@ since that would leak it to anyone who views the embed URL.
 (not fetched from a third-party API), and a new one is picked on every load — the
 rendered output for this widget specifically is never cached.
 
+### Skyline-specific options
+
+`weeks` (default 26, max 104). An isometric-projected 3D-style contribution skyline,
+rendered as pure SVG in real time — no WebGL, no build pipeline, no pre-rendering step.
+Reuses the exact same contribution grid the flat heatmap widget builds, just projected
+differently.
+
+### Medium-specific options
+
+`username` (Medium username, without `@`) or `publication` (a publication slug) —
+required, one or the other. `limit` (default 5, max 10). Reads Medium's public,
+unauthenticated per-profile/per-publication RSS feed; no API key involved.
+
+### Stack-Overflow-specific options
+
+`user_id` (your numeric Stack Overflow user id, from your profile URL — required).
+Reads the public Stack Exchange API, unauthenticated (300 requests/day/IP quota); set
+`STACKEXCHANGE_KEY` (server-side env var, never a request parameter) to raise it on a
+busier self-hosted deployment.
+
+### npm-downloads-specific options
+
+`package` (npm package name; required). Reads npm's public registry and download-count
+APIs — no API key, ever.
+
+### Roster-specific options (stargazers/forks)
+
+`repo` (`owner/name`; required), `kind=stargazers|forks` (default `stargazers`), `limit`
+(default 24, **max 60** — a hard cap, not just a default, so this never becomes the
+"unbounded avatar fetching" this widget was originally deferred over), `columns`, `size`.
+
 ## Gallery
 
 [`/gallery`](/gallery) is a style-taxonomy showcase — Minimal, Vivid, Retro, Animated,
-Badges, Icons — of example cards, each rendered from bundled mock data and linking
+Badges, Icons, 3D, Ecosystem — of example cards, each rendered from bundled mock data and linking
 straight into the builder pre-configured with that example's widget and options.
 
 ## Themes
@@ -245,9 +281,10 @@ Then open <http://localhost:3000/build> or <http://localhost:3000/profile>.
 ## Deployment
 
 Deploys to Vercel (or any Next.js 15 host) with no extra configuration beyond setting
-the `GITHUB_TOKEN` environment variable. `tech-icons`, `typing-header`, `quote`, and
-`wakatime` don't call the GitHub API at all and work with no token configured — every
-other widget still requires one.
+the `GITHUB_TOKEN` environment variable. `tech-icons`, `typing-header`, `quote`,
+`wakatime`, `medium`, `stackoverflow`, and `npm-downloads` don't call the GitHub API at
+all and work with no token configured — every other widget (including `skyline` and
+`roster`, which both do call GitHub) still requires one.
 
 ### Scaling & hardening (optional)
 

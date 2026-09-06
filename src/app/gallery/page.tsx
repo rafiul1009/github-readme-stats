@@ -85,6 +85,24 @@ const SECTIONS: GallerySection[] = [
       { widgetType: "tech-icons", label: "Custom colors", theme: "default", params: { name: "react,vuedotjs,svelte", color: "ffffff,ffffff,ffffff" } },
     ],
   },
+  {
+    title: "3D",
+    description: "An isometric-projected skyline, rendered as pure SVG — no build pipeline required.",
+    examples: [
+      { widgetType: "skyline", label: "Skyline — default", theme: "default" },
+      { widgetType: "skyline", label: "Skyline — radical", theme: "radical", params: { weeks: "40" } },
+      { widgetType: "skyline", label: "Skyline — tokyonight", theme: "tokyonight", params: { weeks: "16" } },
+    ],
+  },
+  {
+    title: "Ecosystem",
+    description: "Beyond GitHub — a blog feed, a Q&A profile, a package's download count, a repo's roster.",
+    examples: [
+      { widgetType: "medium", label: "Medium — latest articles", theme: "default", params: { username: "medium" } },
+      { widgetType: "stackoverflow", label: "Stack Overflow reputation", theme: "default", params: { user_id: "1" } },
+      { widgetType: "npm-downloads", label: "npm weekly downloads", theme: "default", params: { package: "react" } },
+    ],
+  },
 ];
 
 export default function GalleryPage() {

@@ -16,6 +16,11 @@ import { TECH_ICONS_SCHEMA } from "@/widgets/tech-icons/schema";
 import { TYPING_HEADER_SCHEMA } from "@/widgets/typing-header/schema";
 import { WAKATIME_SCHEMA } from "@/widgets/wakatime/schema";
 import { QUOTE_SCHEMA } from "@/widgets/quote/schema";
+import { SKYLINE_SCHEMA } from "@/widgets/skyline/schema";
+import { MEDIUM_SCHEMA } from "@/widgets/medium/schema";
+import { STACKOVERFLOW_SCHEMA } from "@/widgets/stackoverflow/schema";
+import { NPM_DOWNLOADS_SCHEMA } from "@/widgets/npm-downloads/schema";
+import { ROSTER_SCHEMA } from "@/widgets/roster/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
@@ -54,6 +59,11 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   { type: "typing-header", label: "Typing Header", schema: TYPING_HEADER_SCHEMA, identifyingField: "lines" },
   { type: "wakatime", label: "WakaTime Stats", schema: WAKATIME_SCHEMA, identifyingField: "username" },
   { type: "quote", label: "Quote / Joke", schema: QUOTE_SCHEMA },
+  { type: "skyline", label: "Contribution Skyline (3D)", schema: SKYLINE_SCHEMA, identifyingField: "username" },
+  { type: "medium", label: "Medium Articles", schema: MEDIUM_SCHEMA, identifyingField: "username" },
+  { type: "stackoverflow", label: "Stack Overflow", schema: STACKOVERFLOW_SCHEMA, identifyingField: "user_id" },
+  { type: "npm-downloads", label: "npm Downloads", schema: NPM_DOWNLOADS_SCHEMA, identifyingField: "package" },
+  { type: "roster", label: "Stargazers / Forks", schema: ROSTER_SCHEMA, identifyingField: "repo" },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {

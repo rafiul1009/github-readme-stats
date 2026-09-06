@@ -32,5 +32,12 @@ simple-icons (https://simpleicons.org), used as a dependency rather than
 vendored — its icons are CC0-1.0 licensed by their respective brands per
 that project's own terms.
 
+The `medium`, `stackoverflow`, and `npm-downloads` widgets (docs/TODOS.md
+11.3/11.6) read from those services' own public, unauthenticated APIs
+(Medium's per-profile/per-publication RSS feed, the Stack Exchange API,
+and npm's registry/download-count APIs, respectively) at request time —
+no data from those services is bundled, cached beyond this project's
+normal TTL-based caching, or redistributed.
+
 If you maintain one of the projects above and believe this attribution is
 inaccurate or incomplete, please open an issue.

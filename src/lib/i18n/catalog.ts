@@ -81,7 +81,16 @@ export type LabelKey =
   | "techIconsTitle"
   | "wakatimeTitle"
   | "totalTimeThisWeek"
-  | "noWakaTimeData";
+  | "noWakaTimeData"
+  | "skylineTitle"
+  | "mediumTitle"
+  | "noMediumData"
+  | "stackoverflowTitle"
+  | "noStackOverflowData"
+  | "npmDownloadsTitle"
+  | "downloadsLastWeek"
+  | "rosterTitle"
+  | "noRosterData";
 
 export const EN_CATALOG: Record<LabelKey, string> = {
   totalContributions: "Total Contributions",
@@ -154,6 +163,15 @@ export const EN_CATALOG: Record<LabelKey, string> = {
   wakatimeTitle: "{username}'s Weekly Coding Activity",
   totalTimeThisWeek: "Total Time: {total}",
   noWakaTimeData: "No WakaTime activity data available.",
+  skylineTitle: "Contribution Skyline",
+  mediumTitle: "Latest Articles",
+  noMediumData: "No articles found.",
+  stackoverflowTitle: "Stack Overflow",
+  noStackOverflowData: "No Stack Overflow data available.",
+  npmDownloadsTitle: "npm Downloads",
+  downloadsLastWeek: "downloads last week",
+  rosterTitle: "Stargazers",
+  noRosterData: "No one yet — be the first!",
 };
 
 /**

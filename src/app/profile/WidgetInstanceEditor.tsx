@@ -12,6 +12,8 @@ const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: str
   id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
   name: { label: "Names", placeholder: "e.g. react,typescript,nodedotjs" },
   lines: { label: "Lines", placeholder: "e.g. Hi I'm Octocat,I build things" },
+  user_id: { label: "Stack Overflow user ID", placeholder: "e.g. 1" },
+  package: { label: "npm package", placeholder: "e.g. react" },
 };
 
 export interface WidgetInstanceEditorProps {

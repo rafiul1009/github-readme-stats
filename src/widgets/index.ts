@@ -17,5 +17,10 @@ import "@/widgets/tech-icons";
 import "@/widgets/typing-header";
 import "@/widgets/wakatime";
 import "@/widgets/quote";
+import "@/widgets/skyline";
+import "@/widgets/medium";
+import "@/widgets/stackoverflow";
+import "@/widgets/npm-downloads";
+import "@/widgets/roster";
 
 export * from "@/widgets/registry";

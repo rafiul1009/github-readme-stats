@@ -127,6 +127,90 @@ export async function fetchRepoData(ownerRepoParam: string | undefined): Promise
   }
 }
 
+export type RosterKind = "stargazers" | "forks";
+
+export interface RosterEntry {
+  login: string;
+  avatarUrl: string;
+}
+
+export interface RawRosterData {
+  totalCount: number;
+  entries: RosterEntry[];
+}
+
+interface StargazersRosterQueryResult {
+  repository: {
+    stargazers: { totalCount: number; nodes: { login: string; avatarUrl: string }[] };
+  } | null;
+}
+
+interface ForksRosterQueryResult {
+  repository: {
+    forks: { totalCount: number; nodes: { owner: { login: string; avatarUrl: string } }[] };
+  } | null;
+}
+
+const STARGAZERS_ROSTER_QUERY = `
+  query($owner: String!, $name: String!, $limit: Int!) {
+    repository(owner: $owner, name: $name) {
+      stargazers(first: $limit, orderBy: { field: STARRED_AT, direction: DESC }) {
+        totalCount
+        nodes { login avatarUrl }
+      }
+    }
+  }
+`;
+
+const FORKS_ROSTER_QUERY = `
+  query($owner: String!, $name: String!, $limit: Int!) {
+    repository(owner: $owner, name: $name) {
+      forks(first: $limit, orderBy: { field: CREATED_AT, direction: DESC }) {
+        totalCount
+        nodes { owner { login avatarUrl } }
+      }
+    }
+  }
+`;
+
+/**
+ * Stargazer/forker roster (docs/TODOS.md 11.4 — previously deferred over
+ * "unbounded avatar fetching; heavy and slow"). Addressed directly by
+ * bounding `limit` in the widget's schema (a hard max, not just a default)
+ * rather than fetching every stargazer a popular repo has — GitHub's own
+ * GraphQL `first:` argument does the bounding server-side, so an unbounded
+ * fetch was never actually necessary to avoid.
+ */
+export async function fetchRepoRoster(owner: string, name: string, kind: RosterKind, limit: number): Promise<RawRosterData> {
+  try {
+    if (kind === "forks") {
+      const data = await graphqlWithAuth<ForksRosterQueryResult>(FORKS_ROSTER_QUERY, { owner, name, limit });
+      if (!data.repository) {
+        throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
+      }
+      return {
+        totalCount: data.repository.forks.totalCount,
+        entries: data.repository.forks.nodes.map((n) => ({ login: n.owner.login, avatarUrl: n.owner.avatarUrl })),
+      };
+    }
+
+    const data = await graphqlWithAuth<StargazersRosterQueryResult>(STARGAZERS_ROSTER_QUERY, { owner, name, limit });
+    if (!data.repository) {
+      throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
+    }
+    return {
+      totalCount: data.repository.stargazers.totalCount,
+      entries: data.repository.stargazers.nodes.map((n) => ({ login: n.login, avatarUrl: n.avatarUrl })),
+    };
+  } catch (error) {
+    if (error instanceof WidgetRenderError) throw error;
+    if (isNotFoundGraphqlError(error)) {
+      throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
+    }
+    throw wrapGithubError(error, "repository roster");
+  }
+}
+
 /**
  * A repo's total contributor count isn't exposed by the GraphQL API at
  * all — only the REST `/contributors` endpoint has it, and even that
