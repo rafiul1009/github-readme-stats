@@ -12,8 +12,12 @@ deliberately derived from the following prior art, per docs/PLAN.md §7 D10:
   conventions (`hide`, `show`, `bg_color`, `hide_border`, `layout`,
   `langs_count`, `custom_title`, ...) followed per docs/PLAN.md §7 D9, and
   the general shape of the stats/top-languages/pin/gist cards.
-- ryo-ma/github-profile-trophy — trophy rank tiers and naming conventions
-  (planned for a later phase; credited in advance per D7).
+- ryo-ma/github-profile-trophy — trophy rank tiers and standard-trophy
+  threshold values (Stars/Commits/Followers/Issues/PullRequests/Repositories
+  and the multi-language/multi-org/long-time-account secret-trophy
+  thresholds), adopted verbatim per D7. The account-age secret trophies
+  (new/ancient account) use our own disclosed conditions, since upstream
+  deliberately keeps its exact secret-trophy conditions undocumented.
 
 Theme palettes, the rank-percentile approach, and the overall widget
 catalogue were also informed by surveying the broader ecosystem of GitHub

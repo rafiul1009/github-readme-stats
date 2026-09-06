@@ -40,7 +40,31 @@ export type LabelKey =
   | "activityGraphTitle"
   | "heatmapTitle"
   | "less"
-  | "more";
+  | "more"
+  | "trophyGridTitle"
+  | "trophyStars"
+  | "trophyCommits"
+  | "trophyFollowers"
+  | "trophyIssues"
+  | "trophyPrs"
+  | "trophyRepos"
+  | "trophySecretMultiLanguage"
+  | "trophySecretMultiOrg"
+  | "trophySecretAncientAccount"
+  | "trophySecretLongTimeAccount"
+  | "trophySecretNewAccount"
+  | "trophySecretSuperRank"
+  | "profileSummaryTitle"
+  | "reposPerLanguageTitle"
+  | "mostCommitLanguageTitle"
+  | "productiveTimeTitle"
+  | "followers"
+  | "following"
+  | "joined"
+  | "hourOfDay"
+  | "dayOfWeek"
+  | "noTrophiesData"
+  | "noCommitLanguageData";
 
 export const EN_CATALOG: Record<LabelKey, string> = {
   totalContributions: "Total Contributions",
@@ -72,7 +96,40 @@ export const EN_CATALOG: Record<LabelKey, string> = {
   heatmapTitle: "Contribution Heatmap",
   less: "Less",
   more: "More",
+  trophyGridTitle: "GitHub Trophies",
+  trophyStars: "Stars",
+  trophyCommits: "Commits",
+  trophyFollowers: "Followers",
+  trophyIssues: "Issues",
+  trophyPrs: "Pull Requests",
+  trophyRepos: "Repositories",
+  trophySecretMultiLanguage: "Polyglot",
+  trophySecretMultiOrg: "Team Player",
+  trophySecretAncientAccount: "Ancient Account",
+  trophySecretLongTimeAccount: "Long-Time User",
+  trophySecretNewAccount: "New Account",
+  trophySecretSuperRank: "Super Rank",
+  profileSummaryTitle: "{name}'s GitHub Profile",
+  reposPerLanguageTitle: "Repos per Language",
+  mostCommitLanguageTitle: "Most Commit Language",
+  productiveTimeTitle: "Productive Time",
+  followers: "Followers",
+  following: "Following",
+  joined: "Joined {year}",
+  hourOfDay: "Hour of Day",
+  dayOfWeek: "Day of Week",
+  noTrophiesData: "No trophies matched the given filters.",
+  noCommitLanguageData: "No commit data available.",
 };
+
+/**
+ * Phase 7 labels (trophies, profile summary, repos-per-language,
+ * most-commit-language, productive-time) ship English-only for now — see
+ * docs/TODOS.md 7.x. Extending the 12 fully-translated locales above to
+ * cover them is unstarted, scoped-down work, not a bug: `t()` already
+ * falls back to English for any locale missing a key, so nothing renders
+ * blank in the meantime.
+ */
 
 type PartialCatalog = Partial<Record<LabelKey, string>>;
 

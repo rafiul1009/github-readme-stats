@@ -5,8 +5,10 @@ export function getMockUserStats(): RawUserStats {
   return {
     name: "Sample User",
     login: "sample-user",
-    createdAt: "2018-04-12T00:00:00Z",
+    avatarUrl: "https://avatars.githubusercontent.com/u/583231?v=4",
+    createdAt: "2011-06-02T00:00:00Z",
     followers: 842,
+    following: 96,
     totalStars: 3210,
     totalForks: 512,
     totalRepos: 47,
@@ -19,5 +21,7 @@ export function getMockUserStats(): RawUserStats {
     reviews: 65,
     discussionsStarted: 9,
     discussionsAnswered: 14,
+    languageCount: 12,
+    organizationsCount: 4,
   };
 }

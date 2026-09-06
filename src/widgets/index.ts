@@ -7,5 +7,10 @@ import "@/widgets/pin";
 import "@/widgets/gist";
 import "@/widgets/activity-graph";
 import "@/widgets/heatmap";
+import "@/widgets/trophy";
+import "@/widgets/profile-summary";
+import "@/widgets/repos-per-language";
+import "@/widgets/most-commit-language";
+import "@/widgets/productive-time";
 
 export * from "@/widgets/registry";

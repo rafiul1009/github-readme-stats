@@ -1,4 +1,13 @@
-export type StatIconName = "star" | "commit" | "pr" | "issue" | "contrib" | "follower" | "review" | "discussion";
+export type StatIconName =
+  | "star"
+  | "commit"
+  | "pr"
+  | "issue"
+  | "contrib"
+  | "follower"
+  | "review"
+  | "discussion"
+  | "repo";
 
 export interface StatIconProps {
   name: StatIconName;
@@ -78,6 +87,13 @@ function renderGlyph(name: StatIconName) {
       );
     case "discussion":
       return <path d="M2 3 H14 V10 H6 L3 13 V10 H2 Z" fill="none" strokeLinejoin="round" />;
+    case "repo":
+      return (
+        <>
+          <rect x={1.5} y={1.5} width={13} height={13} rx={1.8} fill="none" />
+          <line x1={5} y1={1.5} x2={5} y2={14.5} />
+        </>
+      );
     default:
       return null;
   }

@@ -19,6 +19,11 @@ widgets plus your identity, socials, and tech stack into one complete `README.md
 | Gist | `/api/widget/gist` | `?id=<gist_id>` |
 | Contribution Activity Graph | `/api/widget/activity-graph` | `?username=octocat&graph_style=area` |
 | Contribution Heatmap | `/api/widget/heatmap` | `?username=octocat&weeks=53` |
+| GitHub Trophies | `/api/widget/trophy` | `?username=octocat&row=2&column=6` |
+| Profile Summary | `/api/widget/profile-summary` | `?username=octocat` |
+| Repos per Language | `/api/widget/repos-per-language` | `?username=octocat` |
+| Most Commit Language | `/api/widget/most-commit-language` | `?username=octocat` |
+| Productive Time | `/api/widget/productive-time` | `?username=octocat&timezone=Asia/Kolkata` |
 
 Every widget accepts `format=svg` (default), `format=json` (raw computed data, no
 rendering), or `format=png` (rasterized, Node-only, animations forced off).
@@ -92,6 +97,44 @@ if omitted). Gist: `id=<gist_id>` (required), `show_owner`.
 `weeks` (4-260, default 53) — how many Sun-Sat weeks of history to show, ending on the
 current week; `hide_month_labels`, `hide_weekday_labels`, `hide_legend`. Cell size (and
 so the card's height) is derived from `card_width` and `weeks`.
+
+### Trophy-specific options
+
+`title` (comma list of trophy keys — `stars`, `commits`, `followers`, `issues`, `prs`,
+`repos`, plus the secret trophies `multi-language`, `multi-org`, `ancient-account`,
+`long-time-account`, `new-account`, `super-rank` — omit for all currently-unlocked
+trophies), `rank` (comma list of ranks to show: `SSS SS S AAA AA A B C SECRET`),
+`column`/`row` (grid shape, default 6×2), `margin_w`/`margin_h`, `no_bg`, `no_frame`.
+Rank thresholds are adopted verbatim from ryo-ma/github-profile-trophy (see NOTICE);
+secret trophies are hidden entirely until their condition is met, matching upstream's
+"won't display until unlocked" behavior. Commits always uses the full account history
+(a second, more expensive query), since the current-year figure the stats widget uses
+can't plausibly fill the trophy's rank scale.
+
+### Profile-summary-specific options
+
+`photo_quality=low|medium|high` (source avatar resolution before it's embedded),
+`photo_resize` (rendered avatar diameter in pixels, 30-200, default 76), `revert`
+(avatar on the right instead of the left), `custom_title` supports `{name}`/`{username}`.
+The avatar is fetched once and base64-embedded directly in the SVG (via an SVG
+`<pattern>`), not linked externally — README image proxies can't reach into an inline
+`<image>` the way they can an `<img src>`.
+
+### Repos-per-language / Most-commit-language options
+
+Repos-per-language: `langs_count`, `hide`, `exclude_repo` — same aggregation as the Top
+Languages widget, ranked by repo count instead of byte size. Most-commit-language:
+`langs_count`, `hide` — attributes each owned repo's entire default-branch commit count
+to its primary language (a proxy for "commits authored by this user", not filtered to
+their commits specifically — see the doc comment on `fetchCommitLanguageData` for why).
+
+### Productive-time-specific options
+
+`timezone` (IANA, e.g. `Asia/Kolkata` — defaults to UTC), `hide_hour_of_day`,
+`hide_day_of_week`. Sampled from the 100 most recent default-branch commits across each
+of the user's 20 most-recently-pushed owned repos (up to 2000 commits) — a bounded
+sample, not the account's complete commit history, for the same reason as the
+first-100-repos ceiling noted in the FAQ below.
 
 ## Local development
 

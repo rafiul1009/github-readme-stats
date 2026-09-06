@@ -6,6 +6,11 @@ import { PIN_SCHEMA } from "@/widgets/pin/schema";
 import { GIST_SCHEMA } from "@/widgets/gist/schema";
 import { ACTIVITY_GRAPH_SCHEMA } from "@/widgets/activity-graph/schema";
 import { HEATMAP_SCHEMA } from "@/widgets/heatmap/schema";
+import { TROPHY_SCHEMA } from "@/widgets/trophy/schema";
+import { PROFILE_SUMMARY_SCHEMA } from "@/widgets/profile-summary/schema";
+import { REPOS_PER_LANGUAGE_SCHEMA } from "@/widgets/repos-per-language/schema";
+import { MOST_COMMIT_LANGUAGE_SCHEMA } from "@/widgets/most-commit-language/schema";
+import { PRODUCTIVE_TIME_SCHEMA } from "@/widgets/productive-time/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
@@ -29,6 +34,11 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   { type: "gist", label: "Gist", schema: GIST_SCHEMA, identifyingField: "id" },
   { type: "activity-graph", label: "Contribution Activity Graph", schema: ACTIVITY_GRAPH_SCHEMA, identifyingField: "username" },
   { type: "heatmap", label: "Contribution Heatmap", schema: HEATMAP_SCHEMA, identifyingField: "username" },
+  { type: "trophy", label: "GitHub Trophies", schema: TROPHY_SCHEMA, identifyingField: "username" },
+  { type: "profile-summary", label: "Profile Summary", schema: PROFILE_SUMMARY_SCHEMA, identifyingField: "username" },
+  { type: "repos-per-language", label: "Repos per Language", schema: REPOS_PER_LANGUAGE_SCHEMA, identifyingField: "username" },
+  { type: "most-commit-language", label: "Most Commit Language", schema: MOST_COMMIT_LANGUAGE_SCHEMA, identifyingField: "username" },
+  { type: "productive-time", label: "Productive Time", schema: PRODUCTIVE_TIME_SCHEMA, identifyingField: "username" },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {

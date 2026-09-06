@@ -9,8 +9,10 @@ const graphqlWithAuth = graphql.defaults({
 export interface RawUserStats {
   name: string | null;
   login: string;
+  avatarUrl: string;
   createdAt: string;
   followers: number;
+  following: number;
   totalStars: number;
   totalForks: number;
   totalRepos: number;
@@ -24,15 +26,24 @@ export interface RawUserStats {
   reviews: number;
   discussionsStarted: number;
   discussionsAnswered: number;
+  /** Distinct primary languages across the same first-100-owned-non-fork-repos window used elsewhere. */
+  languageCount: number;
+  organizationsCount: number;
 }
 
 interface UserStatsQueryResult {
   user: {
     name: string | null;
     login: string;
+    avatarUrl: string;
     createdAt: string;
     followers: { totalCount: number };
-    repositories: { totalCount: number; nodes: { stargazerCount: number; forkCount: number }[] };
+    following: { totalCount: number };
+    organizations: { totalCount: number };
+    repositories: {
+      totalCount: number;
+      nodes: { stargazerCount: number; forkCount: number; primaryLanguage: { name: string } | null }[];
+    };
     totalPRs: { totalCount: number };
     mergedPRs: { totalCount: number };
     openIssues: { totalCount: number };
@@ -52,11 +63,14 @@ const USER_STATS_QUERY = `
     user(login: $username) {
       name
       login
+      avatarUrl
       createdAt
       followers { totalCount }
+      following { totalCount }
+      organizations(first: 1) { totalCount }
       repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
         totalCount
-        nodes { stargazerCount forkCount }
+        nodes { stargazerCount forkCount primaryLanguage { name } }
       }
       totalPRs: pullRequests(first: 1) { totalCount }
       mergedPRs: pullRequests(states: MERGED, first: 1) { totalCount }
@@ -121,12 +135,17 @@ export async function fetchUserStats(username: string, includeAllCommits: boolea
     const totalStars = user.repositories.nodes.reduce((sum, repo) => sum + repo.stargazerCount, 0);
     const totalForks = user.repositories.nodes.reduce((sum, repo) => sum + repo.forkCount, 0);
     const allTimeCommits = includeAllCommits ? await fetchAllTimeCommits(username, user.createdAt) : null;
+    const languageCount = new Set(
+      user.repositories.nodes.map((repo) => repo.primaryLanguage?.name).filter((name): name is string => !!name)
+    ).size;
 
     return {
       name: user.name,
       login: user.login,
+      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
       followers: user.followers.totalCount,
+      following: user.following.totalCount,
       totalStars,
       totalForks,
       totalRepos: user.repositories.totalCount,
@@ -139,6 +158,8 @@ export async function fetchUserStats(username: string, includeAllCommits: boolea
       reviews: user.contributionsCollection.totalPullRequestReviewContributions,
       discussionsStarted: user.repositoryDiscussions.totalCount,
       discussionsAnswered: user.repositoryDiscussionComments.totalCount,
+      languageCount,
+      organizationsCount: user.organizations.totalCount,
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -207,6 +228,139 @@ export async function fetchLanguageData(username: string): Promise<RawLanguageDa
   } catch (error) {
     if (error instanceof Error) {
       throw new Error(`Failed to fetch language data: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export interface RawCommitLanguageEntry {
+  name: string;
+  color: string | null;
+  commits: number;
+}
+
+export interface RawCommitLanguageData {
+  entries: RawCommitLanguageEntry[];
+}
+
+interface CommitLanguageQueryResult {
+  user: {
+    repositories: {
+      nodes: {
+        primaryLanguage: { name: string; color: string | null } | null;
+        defaultBranchRef: { target: { history: { totalCount: number } } | null } | null;
+      }[];
+    };
+  };
+}
+
+const COMMIT_LANGUAGE_QUERY = `
+  query($username: String!) {
+    user(login: $username) {
+      repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
+        nodes {
+          primaryLanguage { name color }
+          defaultBranchRef {
+            target {
+              ... on Commit {
+                history { totalCount }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Commits-per-language (docs/TODOS.md 7.6): attributes each owned non-fork
+ * repo's *entire* default-branch commit count to its primary language.
+ * This is a deliberate simplification, not "commits literally authored by
+ * this user" (that would require an author-filtered sub-query per repo, a
+ * second round trip per repo) — a reasonable proxy given the repos are all
+ * ownerAffiliations: OWNER, where the owner accounts for nearly all commits
+ * in practice. Same first-100-repos ceiling as language/repo aggregation
+ * elsewhere in this file.
+ */
+export async function fetchCommitLanguageData(username: string): Promise<RawCommitLanguageData> {
+  try {
+    const data = await graphqlWithAuth<CommitLanguageQueryResult>(COMMIT_LANGUAGE_QUERY, { username });
+
+    const entries: RawCommitLanguageEntry[] = [];
+    for (const repo of data.user.repositories.nodes) {
+      if (!repo.primaryLanguage) continue;
+      const commits = repo.defaultBranchRef?.target?.history.totalCount ?? 0;
+      if (commits === 0) continue;
+      entries.push({ name: repo.primaryLanguage.name, color: repo.primaryLanguage.color, commits });
+    }
+
+    return { entries };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch commit-language data: ${error.message}`);
+    }
+    throw error;
+  }
+}
+
+export interface RawProductiveTimeData {
+  /** UTC ISO commit timestamps, sampled from the user's most recently pushed repos. */
+  commitDates: string[];
+}
+
+interface ProductiveTimeQueryResult {
+  user: {
+    repositories: {
+      nodes: {
+        defaultBranchRef: { target: { history: { nodes: { committedDate: string }[] } } | null } | null;
+      }[];
+    };
+  };
+}
+
+const PRODUCTIVE_TIME_QUERY = `
+  query($username: String!) {
+    user(login: $username) {
+      repositories(ownerAffiliations: OWNER, isFork: false, first: 20, orderBy: { field: PUSHED_AT, direction: DESC }) {
+        nodes {
+          defaultBranchRef {
+            target {
+              ... on Commit {
+                history(first: 100) { nodes { committedDate } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * Hour-of-day/day-of-week commit sample (docs/TODOS.md 7.7): the most
+ * recent 100 default-branch commits from each of the user's 20
+ * most-recently-pushed owned repos (up to 2000 timestamps) — not the
+ * user's complete commit history (that would require paginating full
+ * history across every repo, and isn't filtered to commits literally
+ * authored by the user for the same reason documented on
+ * fetchCommitLanguageData). A bounded, documented sample, same spirit as
+ * the first-100-repos ceiling used elsewhere in this file.
+ */
+export async function fetchProductiveTimeData(username: string): Promise<RawProductiveTimeData> {
+  try {
+    const data = await graphqlWithAuth<ProductiveTimeQueryResult>(PRODUCTIVE_TIME_QUERY, { username });
+
+    const commitDates: string[] = [];
+    for (const repo of data.user.repositories.nodes) {
+      const nodes = repo.defaultBranchRef?.target?.history.nodes ?? [];
+      for (const node of nodes) commitDates.push(node.committedDate);
+    }
+
+    return { commitDates };
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch productive-time data: ${error.message}`);
     }
     throw error;
   }
