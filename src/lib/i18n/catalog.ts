@@ -78,7 +78,10 @@ export type LabelKey =
   | "noBadgesData"
   | "noTechIconsData"
   | "badgesTitle"
-  | "techIconsTitle";
+  | "techIconsTitle"
+  | "wakatimeTitle"
+  | "totalTimeThisWeek"
+  | "noWakaTimeData";
 
 export const EN_CATALOG: Record<LabelKey, string> = {
   totalContributions: "Total Contributions",
@@ -148,6 +151,9 @@ export const EN_CATALOG: Record<LabelKey, string> = {
   noTechIconsData: "No icons requested — pass name=react,python,...",
   badgesTitle: "Badges",
   techIconsTitle: "Tech Stack",
+  wakatimeTitle: "{username}'s Weekly Coding Activity",
+  totalTimeThisWeek: "Total Time: {total}",
+  noWakaTimeData: "No WakaTime activity data available.",
 };
 
 /**

@@ -79,7 +79,7 @@ export async function handleWidgetRequest(
     return respondError("This deployment does not serve this username.", 403, asJson);
   }
 
-  if (!process.env.GITHUB_TOKEN) {
+  if (widget.requiresGithubToken !== false && !process.env.GITHUB_TOKEN) {
     return respondError("GitHub token is not configured", 500, asJson);
   }
 

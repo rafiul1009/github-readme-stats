@@ -11,6 +11,7 @@ const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: str
   repo: { label: "Repository", placeholder: "owner/name" },
   id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
   name: { label: "Names", placeholder: "e.g. react,typescript,nodedotjs" },
+  lines: { label: "Lines", placeholder: "e.g. Hi I'm Octocat,I build things" },
 };
 
 export interface WidgetInstanceEditorProps {
@@ -43,10 +44,9 @@ export function WidgetInstanceEditor({
   const entry = getWidgetCatalogEntry(instance.type);
   if (!entry) return null;
 
-  const identifyingUi = IDENTIFYING_FIELD_LABELS[entry.identifyingField] ?? {
-    label: entry.identifyingField,
-    placeholder: "",
-  };
+  const identifyingUi = entry.identifyingField
+    ? IDENTIFYING_FIELD_LABELS[entry.identifyingField] ?? { label: entry.identifyingField, placeholder: "" }
+    : undefined;
 
   const optionFieldNames = Object.keys(entry.schema).filter(
     (k) => k !== "theme" && k !== "format" && k !== entry.identifyingField
@@ -99,16 +99,18 @@ export function WidgetInstanceEditor({
         </button>
       </div>
 
-      <label className="block mt-2">
-        <span className="block text-xs font-medium mb-1 opacity-80">{identifyingUi.label}</span>
-        <input
-          type="text"
-          className="border rounded px-2 py-1 text-sm w-full bg-transparent"
-          placeholder={identifyingUi.placeholder}
-          value={instance.identifyingValue}
-          onChange={(e) => onChange({ ...instance, identifyingValue: e.target.value })}
-        />
-      </label>
+      {identifyingUi && (
+        <label className="block mt-2">
+          <span className="block text-xs font-medium mb-1 opacity-80">{identifyingUi.label}</span>
+          <input
+            type="text"
+            className="border rounded px-2 py-1 text-sm w-full bg-transparent"
+            placeholder={identifyingUi.placeholder}
+            value={instance.identifyingValue}
+            onChange={(e) => onChange({ ...instance, identifyingValue: e.target.value })}
+          />
+        </label>
+      )}
 
       {expanded && (
         <div className="grid grid-cols-2 gap-x-4 mt-2 border-t pt-2">

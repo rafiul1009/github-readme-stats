@@ -53,6 +53,7 @@ registerWidget({
   schema: TECH_ICONS_SCHEMA,
   cacheSecondsDefault: 86400,
   requiresUsername: false,
+  requiresGithubToken: false,
   dataCacheKeyBase: () => "static",
   fetchRawData: fetchTechIconsRawData,
   computeData: computeTechIconsData,

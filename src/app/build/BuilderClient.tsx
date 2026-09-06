@@ -19,6 +19,7 @@ const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: str
   repo: { label: "Repository", placeholder: "owner/name" },
   id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
   name: { label: "Names", placeholder: "e.g. react,typescript,nodedotjs" },
+  lines: { label: "Lines", placeholder: "e.g. Hi I'm Octocat,I build things" },
 };
 const WIDGET_QUERY_KEY = "_widget";
 const PREVIEW_DEBOUNCE_MS = 250;
@@ -93,11 +94,11 @@ export function BuilderClient() {
   }
 
   const identifyingField = entry.identifyingField;
-  const identifyingValue = typeof form[identifyingField] === "string" ? (form[identifyingField] as string) : "";
-  const identifyingUi = IDENTIFYING_FIELD_LABELS[identifyingField] ?? {
-    label: identifyingField,
-    placeholder: "",
-  };
+  const identifyingValue =
+    identifyingField && typeof form[identifyingField] === "string" ? (form[identifyingField] as string) : "";
+  const identifyingUi = identifyingField
+    ? IDENTIFYING_FIELD_LABELS[identifyingField] ?? { label: identifyingField, placeholder: "" }
+    : undefined;
   const themeName = (fieldValue(entry.schema, form, "theme") as string) ?? "default";
   const theme = getTheme(themeName);
   const finalQuery = buildQueryString(entry.schema, form);
@@ -131,16 +132,18 @@ export function BuilderClient() {
             </select>
           </label>
 
-          <label className="block mb-4">
-            <span className="block text-xs font-medium mb-1 opacity-80">{identifyingUi.label}</span>
-            <input
-              type="text"
-              className="border rounded px-2 py-1.5 text-sm w-full bg-transparent"
-              placeholder={identifyingUi.placeholder}
-              value={identifyingValue}
-              onChange={(e) => setField(identifyingField, e.target.value)}
-            />
-          </label>
+          {identifyingUi && identifyingField && (
+            <label className="block mb-4">
+              <span className="block text-xs font-medium mb-1 opacity-80">{identifyingUi.label}</span>
+              <input
+                type="text"
+                className="border rounded px-2 py-1.5 text-sm w-full bg-transparent"
+                placeholder={identifyingUi.placeholder}
+                value={identifyingValue}
+                onChange={(e) => setField(identifyingField, e.target.value)}
+              />
+            </label>
+          )}
 
           <div className="mb-4">
             <span className="block text-xs font-medium mb-1 opacity-80">Theme</span>
@@ -182,10 +185,10 @@ export function BuilderClient() {
           </div>
 
           <div className="border-t pt-3 mt-3">
-            {identifyingValue ? (
+            {!identifyingField || identifyingValue ? (
               <CopyPanel
                 imageUrl={finalUrl}
-                altText={`${identifyingValue} — ${entry.label}`}
+                altText={`${identifyingValue || entry.label} — ${entry.label}`}
                 themeName={themeName}
                 themeMode={theme.mode}
                 widgetType={entry.type}
@@ -194,7 +197,7 @@ export function BuilderClient() {
                 }
               />
             ) : (
-              <p className="text-sm opacity-60">Enter {identifyingUi.label.toLowerCase()} to generate an embeddable link.</p>
+              <p className="text-sm opacity-60">Enter {identifyingUi?.label.toLowerCase()} to generate an embeddable link.</p>
             )}
           </div>
         </section>

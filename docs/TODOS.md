@@ -191,14 +191,30 @@ slug, 404s an unknown one, and honors `size`/`color`/`format=png`; `tsc --noEmit
 `next build` both clean, with the new `icon/[name]` static route correctly coexisting
 with the sibling `[type]` dynamic route.
 
-## Phase 9 — Companion widgets
+## ✅ Phase 9 — Companion widgets
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 9.1 | Typing-animation header | `lines` (multi), `font`, `size`, `color`, `duration`, `pause`, `width`, `height`, `multiline`, cursor style. | P1 | todo |
-| 9.2 | WakaTime card | `layout=default\|compact`, `display_format=time\|percent`, `api_domain` (Wakapi/Hakatime), `langs_count`, `hide_progress`. | P1 | todo |
-| 9.3 | Quote / joke card | Bundled quote set; category + refresh-per-load. | P2 | todo |
-| 9.4 | Gallery page | Style-taxonomy showcase (Minimal, Vivid, Retro, Animated, Badges, Icons) linking into the pre-configured builder. | P1 | todo |
+| 9.1 | ✅ Typing-animation header | `src/widgets/typing-header/`: `lines`, `font` (default monospace), `size`, `duration` (ms/line), `pause`, `card_width`/`card_height` (reused common options rather than adding redundant `width`/`height` names), `multiline`, `hide_cursor`. Real from-scratch SMIL implementation (no JS, no per-character elements): each line's reveal is an animated `<clipPath>` rect width; rotate mode (default) puts every line's reveal on ONE shared `dur`/`begin=0s repeatCount=indefinite` clock with each line's own timing encoded as `keyTimes` fractions of that shared cycle, keeping every element perfectly synchronized without SMIL syncbase chaining; multiline mode types once, stacks permanently, and freezes (no erase/loop). `disable_animations` (and PNG, which forces it) renders the fully-typed final state directly, matching the `DrawOnPath` convention from Phase 6. Cursor tracks position via the same shared-clock technique in rotate mode; simplified to "appear once typing finishes" in multiline mode rather than chasing per-line jump discontinuities — documented scope-down, noted inline. No RTL/locale support — content is arbitrary user text, not a translated label, so translation doesn't apply, and mirroring the reveal direction is out of scope for this pass. | P1 | done |
+| 9.2 | ✅ WakaTime card | `src/lib/wakatime.ts` + `src/widgets/wakatime/`: `layout=default\|compact`, `display_format=time\|percent`, `api_domain` (Wakapi/Hakatime-compatible), `langs_count`, `hide_progress`. Uses WakaTime's public unauthenticated stats endpoint (requires the user's profile to be set public) — no API key is accepted as a widget parameter, since a hosted multi-tenant deployment has no way to keep a per-viewer secret out of a public embed URL. Layouts mirror Top Languages' normal/compact renderers. | P1 | done |
+| 9.3 | ✅ Quote / joke card | `src/lib/quotes.ts` (32 bundled, categorized quotes — programming/motivational/humor) + `src/widgets/quote/`. `category=random\|programming\|motivational\|humor`. "Refresh every load" is real, not simulated: the random pick happens in `computeData` (per the registry's contract, never cached) and `cacheSecondsDefault: 0` keeps the rendered SVG from being memoized either — confirmed via 3 consecutive requests returning different quotes. | P2 | done |
+| 9.4 | ✅ Gallery page | `src/app/gallery/page.tsx`: 6 sections (Minimal, Vivid, Retro, Animated, Badges, Icons) × 3 examples each, every example rendered from bundled mock data via `/preview` (free, no GitHub call) and linking into `/build?_widget=...&...` pre-seeded with that example's options, reusing the URL-state seeding already built in task 1.14. Linked from the homepage. | P1 | done |
+
+**Cross-cutting fixes made while building these** (not a numbered task, but real bugs, not scope creep):
+- `tech-icons`, `typing-header`, `quote`, and `wakatime` never call the GitHub API, but `handleWidgetRequest` unconditionally 500'd every widget without a `GITHUB_TOKEN` configured. Added `requiresGithubToken?: boolean` to `WidgetDefinition` (default `true`) and set it `false` on these four — a self-host deployment that only wants GitHub-independent companion widgets no longer needs a token it will never use.
+- `WidgetCatalogEntry.identifyingField` is now optional (`quote` has no natural single identifying value). Updated `widgetUrl.ts`'s `widgetImageUrl`, and both `BuilderClient.tsx`/`WidgetInstanceEditor.tsx`'s identifying-field UI, to treat "no identifyingField" as "always ready to render" rather than requiring a value that could never be filled in. Also fixed a related latent bug in `BuilderClient.tsx`: the copy-panel gating checked `identifyingValue` truthiness even for widgets with no `identifyingField`, which would have permanently hidden the embed-link panel for `quote`.
+
+No explicit test task was planned for this phase — skipped per standing instruction,
+verified manually instead. Confirmed via a local dev server: typing-header's rotate mode
+(2 lines, correct shared-cycle `keyTimes`/`values` inspected directly in the SVG output),
+multiline mode, and `disable_animations` (renders the static final-typed state, zero
+`<animate>` elements); WakaTime's default/compact layouts and `display_format`; quote's
+genuine per-request randomness (3 consecutive requests, 3 different results) and all 4
+categories; the cross-cutting `GITHUB_TOKEN` fix (confirmed all 4 token-independent
+widgets now 200 with no token configured, while a token-requiring widget like `stats`
+still correctly 500s); `locale=ar` RTL for wakatime/quote; PNG rasterization for all
+three widgets; the gallery page renders all 6 sections and every example links into a
+working, pre-configured `/build` page. `tsc --noEmit` and `next build` both clean.
 
 ## Phase 10 — Scaling & hardening
 

@@ -14,5 +14,8 @@ import "@/widgets/most-commit-language";
 import "@/widgets/productive-time";
 import "@/widgets/badges";
 import "@/widgets/tech-icons";
+import "@/widgets/typing-header";
+import "@/widgets/wakatime";
+import "@/widgets/quote";
 
 export * from "@/widgets/registry";

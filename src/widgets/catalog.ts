@@ -13,13 +13,21 @@ import { MOST_COMMIT_LANGUAGE_SCHEMA } from "@/widgets/most-commit-language/sche
 import { PRODUCTIVE_TIME_SCHEMA } from "@/widgets/productive-time/schema";
 import { BADGES_SCHEMA } from "@/widgets/badges/schema";
 import { TECH_ICONS_SCHEMA } from "@/widgets/tech-icons/schema";
+import { TYPING_HEADER_SCHEMA } from "@/widgets/typing-header/schema";
+import { WAKATIME_SCHEMA } from "@/widgets/wakatime/schema";
+import { QUOTE_SCHEMA } from "@/widgets/quote/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
   label: string;
   schema: OptionSchema;
-  /** The schema field that identifies what to fetch — "username" for most widgets, "repo"/"id" for pin/gist. */
-  identifyingField: string;
+  /**
+   * The schema field that identifies what to fetch — "username" for most
+   * widgets, "repo"/"id" for pin/gist. Omitted for widgets with no single
+   * required identifying value (e.g. quote, which needs nothing beyond its
+   * own options to render).
+   */
+  identifyingField?: string;
 }
 
 /**
@@ -43,6 +51,9 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   { type: "productive-time", label: "Productive Time", schema: PRODUCTIVE_TIME_SCHEMA, identifyingField: "username" },
   { type: "badges", label: "Badges", schema: BADGES_SCHEMA, identifyingField: "username" },
   { type: "tech-icons", label: "Tech Icons", schema: TECH_ICONS_SCHEMA, identifyingField: "name" },
+  { type: "typing-header", label: "Typing Header", schema: TYPING_HEADER_SCHEMA, identifyingField: "lines" },
+  { type: "wakatime", label: "WakaTime Stats", schema: WAKATIME_SCHEMA, identifyingField: "username" },
+  { type: "quote", label: "Quote / Joke", schema: QUOTE_SCHEMA },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {

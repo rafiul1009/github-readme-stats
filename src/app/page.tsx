@@ -24,6 +24,12 @@ export default function Home() {
         >
           Build a full README
         </Link>
+        <Link
+          href="/gallery"
+          className="rounded-full border px-5 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Browse the gallery
+        </Link>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">

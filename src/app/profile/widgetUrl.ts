@@ -5,7 +5,8 @@ import type { WidgetInstance } from "./types";
 /**
  * A widget's own identifying value if set, otherwise the profile's shared
  * username as a fallback for username-identified widgets (repo/gist widgets
- * have no sensible fallback and must be filled in individually).
+ * have no sensible fallback and must be filled in individually). Widgets
+ * with no `identifyingField` at all (e.g. quote) have nothing to fill in.
  */
 export function effectiveIdentifyingValue(instance: WidgetInstance, profileUsername: string): string {
   if (instance.identifyingValue.trim()) return instance.identifyingValue.trim();
@@ -25,12 +26,14 @@ export function widgetImageUrl(
   profileUsername: string
 ): string | undefined {
   const entry = getWidgetCatalogEntry(instance.type);
+  if (!entry) return undefined;
+
   const identifyingValue = effectiveIdentifyingValue(instance, profileUsername);
-  if (!entry || !identifyingValue) return undefined;
+  if (entry.identifyingField && !identifyingValue) return undefined;
 
   const form: FormState = {
     ...instance.options,
-    [entry.identifyingField]: identifyingValue,
+    ...(entry.identifyingField ? { [entry.identifyingField]: identifyingValue } : {}),
     theme: sharedTheme,
   };
   const qs = buildQueryString(entry.schema, form);

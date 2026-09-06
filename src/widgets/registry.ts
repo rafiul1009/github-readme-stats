@@ -51,6 +51,14 @@ export interface WidgetDefinition<S extends OptionSchema = OptionSchema, TData =
    * instead of an (absent) username.
    */
   dataCacheKeyBase?: (options: InferOptions<S>) => string | undefined;
+  /**
+   * Set to `false` for widgets whose `fetchRawData` never calls the GitHub
+   * API at all (tech-icons, typing-header, quote — pure functions of their
+   * own options). Defaults to `true`, since most widgets do. A self-hosted
+   * deployment that only wants these GitHub-independent companion widgets
+   * shouldn't be forced to configure a `GITHUB_TOKEN` it will never use.
+   */
+  requiresGithubToken?: boolean;
 }
 
 /**
@@ -70,6 +78,7 @@ interface ErasedWidgetDefinition {
   mockRawData?: (options: Record<string, unknown>) => unknown;
   requiresUsername?: boolean;
   dataCacheKeyBase?: (options: Record<string, unknown>) => string | undefined;
+  requiresGithubToken?: boolean;
 }
 
 const registry = new Map<string, ErasedWidgetDefinition>();

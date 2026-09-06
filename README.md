@@ -3,7 +3,8 @@
 A customizable widget generator for GitHub profile READMEs. Pick a card, configure it
 in the live builder, and copy the embed — no more hand-editing query strings.
 
-**[Open the widget builder →](/build)** · **[Build a full README →](/profile)**
+**[Open the widget builder →](/build)** · **[Build a full README →](/profile)** ·
+**[Browse the gallery →](/gallery)**
 
 The widget builder generates one embed at a time. The profile builder composes several
 widgets plus your identity, socials, and tech stack into one complete `README.md`.
@@ -26,6 +27,9 @@ widgets plus your identity, socials, and tech stack into one complete `README.md
 | Productive Time | `/api/widget/productive-time` | `?username=octocat&timezone=Asia/Kolkata` |
 | Badges | `/api/widget/badges` | `?username=octocat&name=followers,total-stars` |
 | Tech Icons | `/api/widget/tech-icons` | `?name=react,typescript,nodedotjs` |
+| Typing Header | `/api/widget/typing-header` | `?lines=Hi, I'm Octocat,I build things` |
+| WakaTime Stats | `/api/widget/wakatime` | `?username=<wakatime-username>` |
+| Quote / Joke | `/api/widget/quote` | `?category=programming` |
 
 There's also a standalone `/api/widget/icon/<simple-icons-slug>` route (e.g.
 `/api/widget/icon/react?color=fff&size=32`) for a single bundled tech icon outside the
@@ -161,6 +165,40 @@ one per badge, falling back to `theme` when omitted), `column` (badges per row, 
 back to the icon's own brand color), `glow`, `wave`. An unrecognized slug renders as a
 "?" placeholder tile instead of failing the whole grid.
 
+### Typing-header-specific options
+
+`lines` (comma list, required), `font` (default a monospace stack — the typing reveal's
+timing assumes roughly-monospace character widths), `size`, `duration` (ms to type each
+line), `pause` (ms to hold before erasing/advancing), `multiline` (types all lines and
+keeps them stacked permanently, no erase/loop — default rotates through lines one at a
+time, erasing and looping forever), `hide_cursor`. Text color follows `text_color`
+(falling back to the theme's accent slot); the cursor follows `icon_color`. No
+locale/RTL support — every line is arbitrary user-supplied text, not a translated label,
+so there's nothing to translate, and mirroring the reveal direction for RTL is scoped
+out as a separate future enhancement.
+
+### WakaTime-specific options
+
+`username` (their WakaTime — not GitHub — username; required), `api_domain` (for
+self-hosted Wakapi/Hakatime instances, default `wakatime.com`), `layout=default|compact`,
+`display_format=time|percent`, `langs_count`, `hide_progress`. Reads WakaTime's public,
+unauthenticated stats endpoint — the user must set their coding activity to public in
+their WakaTime privacy settings (Settings → visibility), the same tradeoff GitHub's own
+public contribution graph makes. No API key is ever accepted as a widget parameter,
+since that would leak it to anyone who views the embed URL.
+
+### Quote/joke-specific options
+
+`category=random|programming|motivational|humor` (default `random`). Quotes are bundled
+(not fetched from a third-party API), and a new one is picked on every load — the
+rendered output for this widget specifically is never cached.
+
+## Gallery
+
+[`/gallery`](/gallery) is a style-taxonomy showcase — Minimal, Vivid, Retro, Animated,
+Badges, Icons — of example cards, each rendered from bundled mock data and linking
+straight into the builder pre-configured with that example's widget and options.
+
 ## Local development
 
 ```bash
@@ -184,7 +222,9 @@ Then open <http://localhost:3000/build> or <http://localhost:3000/profile>.
 ## Deployment
 
 Deploys to Vercel (or any Next.js 15 host) with no extra configuration beyond setting
-the `GITHUB_TOKEN` environment variable.
+the `GITHUB_TOKEN` environment variable. `tech-icons`, `typing-header`, `quote`, and
+`wakatime` don't call the GitHub API at all and work with no token configured — every
+other widget still requires one.
 
 ### Self-hosting with Docker
 
