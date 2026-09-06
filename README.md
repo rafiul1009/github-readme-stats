@@ -24,6 +24,12 @@ widgets plus your identity, socials, and tech stack into one complete `README.md
 | Repos per Language | `/api/widget/repos-per-language` | `?username=octocat` |
 | Most Commit Language | `/api/widget/most-commit-language` | `?username=octocat` |
 | Productive Time | `/api/widget/productive-time` | `?username=octocat&timezone=Asia/Kolkata` |
+| Badges | `/api/widget/badges` | `?username=octocat&name=followers,total-stars` |
+| Tech Icons | `/api/widget/tech-icons` | `?name=react,typescript,nodedotjs` |
+
+There's also a standalone `/api/widget/icon/<simple-icons-slug>` route (e.g.
+`/api/widget/icon/react?color=fff&size=32`) for a single bundled tech icon outside the
+grid layout — see https://simpleicons.org for valid slugs.
 
 Every widget accepts `format=svg` (default), `format=json` (raw computed data, no
 rendering), or `format=png` (rasterized, Node-only, animations forced off).
@@ -135,6 +141,25 @@ their commits specifically — see the doc comment on `fetchCommitLanguageData` 
 of the user's 20 most-recently-pushed owned repos (up to 2000 commits) — a bounded
 sample, not the account's complete commit history, for the same reason as the
 first-100-repos ceiling noted in the FAQ below.
+
+### Badges-specific options
+
+`name` (comma list of badge types, in order — required). User badges (need `username`):
+`repositories`, `followers`, `organization`, `languages`, `total-stars`,
+`total-contributors`, `total-commits`, `total-code-reviews`, `total-issues`,
+`total-pull-requests`, `total-joined-years`. Repo badges (need `repo=owner/name`):
+`stars`, `forks`, `contributors`, `issues`, `pull-requests`, `watchers`, `size`. A badge
+name that isn't recognized, or whose scope's required parameter is missing, renders as
+"N/A" rather than failing the whole request. `themes` (comma list of theme names — cycles
+one per badge, falling back to `theme` when omitted), `column` (badges per row, 1-50),
+`size` (badge height), `p` (padding/gap), `glow`, `wave`.
+
+### Tech-icons-specific options
+
+`name` (comma list of simple-icons slugs — required; see https://simpleicons.org),
+`columns` (1-50), `size`, `color` (comma list, index-mapped to `name`, empty entries fall
+back to the icon's own brand color), `glow`, `wave`. An unrecognized slug renders as a
+"?" placeholder tile instead of failing the whole grid.
 
 ## Local development
 

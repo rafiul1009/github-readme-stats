@@ -10,6 +10,7 @@ const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: str
   username: { label: "GitHub username", placeholder: "e.g. octocat" },
   repo: { label: "Repository", placeholder: "owner/name" },
   id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
+  name: { label: "Names", placeholder: "e.g. react,typescript,nodedotjs" },
 };
 
 export interface WidgetInstanceEditorProps {
@@ -118,6 +119,7 @@ export function WidgetInstanceEditor({
               def={entry.schema[name]}
               value={fieldValue(entry.schema, instance.options, name)}
               onChange={(v: FormValue) => onChange({ ...instance, options: { ...instance.options, [name]: v } })}
+              widgetType={entry.type}
             />
           ))}
         </div>

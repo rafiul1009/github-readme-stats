@@ -11,6 +11,8 @@ import { PROFILE_SUMMARY_SCHEMA } from "@/widgets/profile-summary/schema";
 import { REPOS_PER_LANGUAGE_SCHEMA } from "@/widgets/repos-per-language/schema";
 import { MOST_COMMIT_LANGUAGE_SCHEMA } from "@/widgets/most-commit-language/schema";
 import { PRODUCTIVE_TIME_SCHEMA } from "@/widgets/productive-time/schema";
+import { BADGES_SCHEMA } from "@/widgets/badges/schema";
+import { TECH_ICONS_SCHEMA } from "@/widgets/tech-icons/schema";
 
 export interface WidgetCatalogEntry {
   type: string;
@@ -39,6 +41,8 @@ export const WIDGET_CATALOG: WidgetCatalogEntry[] = [
   { type: "repos-per-language", label: "Repos per Language", schema: REPOS_PER_LANGUAGE_SCHEMA, identifyingField: "username" },
   { type: "most-commit-language", label: "Most Commit Language", schema: MOST_COMMIT_LANGUAGE_SCHEMA, identifyingField: "username" },
   { type: "productive-time", label: "Productive Time", schema: PRODUCTIVE_TIME_SCHEMA, identifyingField: "username" },
+  { type: "badges", label: "Badges", schema: BADGES_SCHEMA, identifyingField: "username" },
+  { type: "tech-icons", label: "Tech Icons", schema: TECH_ICONS_SCHEMA, identifyingField: "name" },
 ];
 
 export function getWidgetCatalogEntry(type: string): WidgetCatalogEntry | undefined {

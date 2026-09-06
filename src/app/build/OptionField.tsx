@@ -2,10 +2,28 @@
 
 import type { OptionDef } from "@/lib/options";
 import { WEEKDAY_ABBREVIATIONS } from "@/widgets/streak/schema";
+import { USER_BADGE_KEYS, REPO_BADGE_KEYS } from "@/lib/badges";
 import { LOCALES } from "@/lib/i18n";
 import type { FormValue } from "./query";
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/**
+ * A curated shortlist of common simple-icons slugs for the tech-icons
+ * widget's `name` field autocomplete (docs/TODOS.md 8.8) — not the full
+ * ~3,459-icon catalog, which is both impractical as a `<datalist>` and
+ * server-only data we don't want in the client bundle. Free text still
+ * accepts any valid slug; see https://simpleicons.org for the full list.
+ */
+const COMMON_TECH_ICON_SLUGS = [
+  "react", "vuedotjs", "angular", "svelte", "nextdotjs", "nuxtdotjs", "typescript", "javascript",
+  "python", "go", "rust", "cplusplus", "c", "csharp", "java", "kotlin", "swift", "php", "ruby",
+  "nodedotjs", "deno", "bun", "html5", "css3", "tailwindcss", "sass", "webpack", "vite",
+  "docker", "kubernetes", "amazonaws", "googlecloud", "microsoftazure", "vercel", "netlify",
+  "git", "github", "gitlab", "postgresql", "mysql", "mongodb", "redis", "sqlite", "graphql",
+  "django", "flask", "fastapi", "spring", "laravel", "express", "nestjs", "flutter", "dart",
+  "androidstudio", "linux", "ubuntu", "nginx", "figma", "jest", "pytorch", "tensorflow",
+];
 
 /** Common `date_format` presets (task 5.4) — free text still works for anything else. */
 const DATE_FORMAT_PRESETS = [
@@ -22,11 +40,39 @@ export interface OptionFieldProps {
   def: OptionDef;
   value: FormValue;
   onChange: (value: FormValue) => void;
+  /** Disambiguates same-named fields across widgets (e.g. "name" means badge types for `badges`, icon slugs for `tech-icons`). */
+  widgetType?: string;
 }
 
 /** Renders a form control for a single declared option, dispatching on its schema type (docs/TODOS.md task 1.8). */
-export function OptionField({ name, def, value, onChange }: OptionFieldProps) {
+export function OptionField({ name, def, value, onChange, widgetType }: OptionFieldProps) {
   const label = name.replace(/_/g, " ");
+
+  if (name === "name" && widgetType === "badges") {
+    const selected = new Set(Array.isArray(value) ? value : []);
+    const toggle = (key: string) => {
+      const next = new Set(selected);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      onChange(Array.from(next));
+    };
+    return (
+      <Field label="Badges" description={def.description}>
+        <div className="text-xs font-semibold opacity-70 mb-1">User badges</div>
+        <div className="flex gap-1 flex-wrap mb-2">
+          {USER_BADGE_KEYS.map((key) => (
+            <BadgeToggle key={key} label={key} active={selected.has(key)} onClick={() => toggle(key)} />
+          ))}
+        </div>
+        <div className="text-xs font-semibold opacity-70 mb-1">Repo badges (need `repo`)</div>
+        <div className="flex gap-1 flex-wrap">
+          {REPO_BADGE_KEYS.map((key) => (
+            <BadgeToggle key={key} label={key} active={selected.has(key)} onClick={() => toggle(key)} />
+          ))}
+        </div>
+      </Field>
+    );
+  }
 
   if (name === "locale") {
     const stringValue = typeof value === "string" ? value : "en";
@@ -73,6 +119,34 @@ export function OptionField({ name, def, value, onChange }: OptionFieldProps) {
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
         />
+      </Field>
+    );
+  }
+
+  if (name === "name" && widgetType === "tech-icons") {
+    const stringValue = Array.isArray(value) ? value.join(",") : "";
+    return (
+      <Field label="Icon slugs" description={def.description}>
+        <input
+          type="text"
+          list="tech-icon-slugs"
+          className="border rounded px-2 py-1 text-sm w-full bg-transparent"
+          placeholder="react,typescript,nodedotjs"
+          value={stringValue}
+          onChange={(e) =>
+            onChange(
+              e.target.value
+                .split(",")
+                .map((v) => v.trim())
+                .filter(Boolean)
+            )
+          }
+        />
+        <datalist id="tech-icon-slugs">
+          {COMMON_TECH_ICON_SLUGS.map((slug) => (
+            <option key={slug} value={slug} />
+          ))}
+        </datalist>
       </Field>
     );
   }
@@ -230,5 +304,19 @@ function Field({
       <span className="block text-xs font-medium capitalize mb-1 opacity-80">{label}</span>
       {children}
     </label>
+  );
+}
+
+function BadgeToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+        active ? "bg-blue-600 text-white border-blue-600" : "bg-transparent border-neutral-400 dark:border-neutral-600"
+      }`}
+    >
+      {label}
+    </button>
   );
 }

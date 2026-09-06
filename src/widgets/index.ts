@@ -12,5 +12,7 @@ import "@/widgets/profile-summary";
 import "@/widgets/repos-per-language";
 import "@/widgets/most-commit-language";
 import "@/widgets/productive-time";
+import "@/widgets/badges";
+import "@/widgets/tech-icons";
 
 export * from "@/widgets/registry";

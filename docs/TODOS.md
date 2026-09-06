@@ -165,18 +165,31 @@ via a local dev server, not live GitHub data (no network egress in this environm
 that verification pass; the GraphQL queries themselves were checked field-by-field
 against the existing `githubStats.ts` query patterns rather than guessed).
 
-## Phase 8 — Badges & icons
+## ✅ Phase 8 — Badges & icons
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 8.1 | Badge engine | `/api/widget/badges?name=a,b,c` composable rows; `column` (1–50), `size`, padding `p`, per-badge **theme cycling** from a comma list. | P0 | todo |
-| 8.2 | User badge types | `visitors`, `repositories`, `followers`, `organization`, `languages`, `total-stars`, `total-contributors`, `total-commits`, `total-code-reviews`, `total-issues`, `total-pull-requests`, `total-joined-years`. | P0 | todo |
-| 8.3 | Repo badge types | `stars`, `forks`, `contributors`, `issues`, `pull-requests`, `watchers`, `size`. | P1 | todo |
-| 8.4 | Visitor counter | Persistent counter with **privacy-preserving IP hashing**. **Blocked on 10.1** (durable storage) — the only widget with that dependency. | P1 | blocked |
-| 8.5 | Tech-icon grid | `name=` comma list, `columns` (1–50), index-mapped `color` list with fallback, `size`. | P1 | todo |
-| 8.6 | Icon set + single-icon route | Bundled tech icon library; `/api/widget/icon/<name>`. | P1 | todo |
-| 8.7 | Visual effects | `glow` and `wave` as a styling layer independent of theme. | P2 | todo |
-| 8.8 | Builder support | Multi-select badge/icon pickers; swap Phase 4's shields.io fallback for the native engine. | P1 | todo |
+| 8.1 | ✅ Badge engine | `src/widgets/badges/`: `/api/widget/badges?name=a,b,c` composable, order-preserving rows; `column` (1-50, badges-per-row wrap), `size` (badge height), `p` (padding/gap), per-badge **theme cycling** via `themes=` (comma list — `badge[i]` uses `themes[i % themes.length]`, falling back to the common `theme` option). Badge width is auto-sized from its label/value text via a new small char-width heuristic (`src/lib/textWidth.ts` — no canvas/font-metrics library available server-side). Hit and fixed the exact class of RTL-mirroring bug documented from Phase 5's PinCard fix: a first attempt bulk-wrapped each whole badge pill (a left-edge-anchored span) in one `RtlMirror`, which is only correct for anchor-point content (single centered text, StreakCard/StatsCard's existing pattern) — a *spanning* shape needs each of its own text elements individually anchored at their own center, with the (shape-symmetric, so RtlMirror-free) background rects positioned by absolute coordinates and left to Card's own top-level mirror. Documented inline in `BadgesCard.tsx` for the next widget that hits it. | P0 | done |
+| 8.2 | ✅ User badge types | `repositories`, `followers`, `organization`, `languages`, `total-stars`, `total-contributors`, `total-commits`, `total-code-reviews`, `total-issues`, `total-pull-requests`, `total-joined-years` — `src/lib/badges.ts`. `visitors` is deliberately **not** in the catalog (see 8.4); requesting it degrades to the same "N/A" fallback as a typo'd name rather than crashing. `total-contributors` reinterprets as "repos contributed to" (`contributedTo`) since the GitHub API has no "total contributors across your own repos" aggregate metric — noted in-code and in the README. | P0 | done |
+| 8.3 | ✅ Repo badge types | `stars`, `forks`, `contributors`, `issues`, `pull-requests`, `watchers`, `size` — extended `src/lib/githubRepo.ts`'s `RawRepoData`/`REPO_QUERY` with `issues`/`pullRequests`/`watchers`/`diskUsage`. `contributors` isn't exposed by the GraphQL API at all, so `fetchRepoContributorCount` uses the well-known REST trick (shields.io uses the same one): request `contributors?per_page=1` and read the last-page number out of the paginated response's `Link` header — only fetched when that specific badge is requested. | P1 | done |
+| 8.4 | Visitor counter | Persistent counter with **privacy-preserving IP hashing**. **Blocked on 10.1** (durable storage) — the only widget with that dependency; `visitors` omitted from 8.2's catalog rather than half-implemented. | P1 | blocked |
+| 8.5 | ✅ Tech-icon grid | `src/widgets/tech-icons/`: `name=` comma list, `columns` (1-50), index-mapped `color` list (empty entries fall back to the icon's own brand hex), `size`. An unrecognized slug renders a "?" placeholder tile instead of failing the whole grid. | P1 | done |
+| 8.6 | ✅ Icon set + single-icon route | Bundled via the `simple-icons` npm package (~3,459 CC0-licensed brand icons as path data + hex colors — added as a real dependency rather than hand-drawing glyphs; see NOTICE) — `src/lib/icons.ts` builds a slug-keyed lookup once at module load (robust to that package's internal per-icon export-naming convention, which it iterates past rather than depends on). `/api/widget/icon/<name>` (`src/app/api/widget/icon/[name]/route.ts`) is a standalone route outside the widget-registry/theme system — Next.js correctly prioritizes this static `icon/` segment over the sibling `[type]` dynamic route, so both coexist; supports `size`, `color`, `format=png`. | P1 | done |
+| 8.7 | ✅ Visual effects | `glow` (an SVG `feGaussianBlur`+`feMerge` filter behind each tile) and `wave` (a staggered `<animateTransform>` vertical bob, pure-Y so it can't interact with the RTL mirroring math) on both `badges` and `tech-icons` — independent of theme, opt-in booleans. | P2 | done |
+| 8.8 | ✅ Builder support (scoped) | Both widgets get the builder's form/preview for free via the catalog (`src/widgets/catalog.ts`). Added a real multi-select **checkbox** picker for `badges`' `name` field (grouped user/repo badges) and a `<datalist>`-backed autocomplete text field for `tech-icons`' `name` (a curated ~60-slug shortlist — the full 3,459-icon catalog isn't practical as checkboxes or a client-bundled list; free text still accepts any valid slug) — both special-cased in `OptionField.tsx`, which now takes an optional `widgetType` prop to disambiguate the same field name (`name`) meaning different things on different widgets. **Not done**: swapping the Phase 4 profile builder's `shields.io` fallback (`src/app/profile/{badges,social,techstack}.ts`) over to this native engine — shields.io badges are a single combined label+color+logo image, and this engine's pill format doesn't yet reproduce that exact visual (logo *inside* a colored badge); scoped out as a separate follow-up rather than changing the profile builder's visual design as a side effect of this phase. | P1 | done (scoped down — see note) |
+
+No explicit test task was planned for this phase (unlike 7.9/6.6) — tests were, as
+always this session, skipped per user instruction; verified manually instead. Confirmed
+via a local dev server: user badges (`repositories,followers,total-stars,total-commits`)
+and repo badges (`stars,forks,contributors,size`) both resolve correct values against
+the sample data; an unknown badge name degrades to `"N/A"` instead of erroring; `themes=`
+cycling, `glow`, `wave` (staggered, confirmed 2 distinct `begin=` offsets for 2 badges),
+and `locale=ar` (RTL — specifically re-verified badge text stayed upright and correctly
+positioned after the anchor-point bug described in 8.1 was found and fixed) all render
+correctly in `svg`, `json`, and `png` formats; the single-icon route resolves a known
+slug, 404s an unknown one, and honors `size`/`color`/`format=png`; `tsc --noEmit` and
+`next build` both clean, with the new `icon/[name]` static route correctly coexisting
+with the sibling `[type]` dynamic route.
 
 ## Phase 9 — Companion widgets
 

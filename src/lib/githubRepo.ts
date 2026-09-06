@@ -30,6 +30,12 @@ export interface RawRepoData {
   stars: number;
   forks: number;
   language: { name: string; color: string } | null;
+  /** Open + closed issues (docs/TODOS.md 8.3). */
+  issues: number;
+  pullRequests: number;
+  watchers: number;
+  /** Repo size, in KB, as reported by the GraphQL API's diskUsage field. */
+  sizeKb: number;
 }
 
 interface RepoQueryResult {
@@ -43,6 +49,11 @@ interface RepoQueryResult {
     forkCount: number;
     primaryLanguage: { name: string; color: string | null } | null;
     owner: { login: string };
+    openIssues: { totalCount: number };
+    closedIssues: { totalCount: number };
+    pullRequests: { totalCount: number };
+    watchers: { totalCount: number };
+    diskUsage: number | null;
   } | null;
 }
 
@@ -58,6 +69,11 @@ const REPO_QUERY = `
       forkCount
       primaryLanguage { name color }
       owner { login }
+      openIssues: issues(states: OPEN, first: 1) { totalCount }
+      closedIssues: issues(states: CLOSED, first: 1) { totalCount }
+      pullRequests(first: 1) { totalCount }
+      watchers(first: 1) { totalCount }
+      diskUsage
     }
   }
 `;
@@ -96,6 +112,10 @@ export async function fetchRepoData(ownerRepoParam: string | undefined): Promise
       language: repo.primaryLanguage
         ? { name: repo.primaryLanguage.name, color: repo.primaryLanguage.color ?? "#858585" }
         : null,
+      issues: repo.openIssues.totalCount + repo.closedIssues.totalCount,
+      pullRequests: repo.pullRequests.totalCount,
+      watchers: repo.watchers.totalCount,
+      sizeKb: repo.diskUsage ?? 0,
     };
   } catch (error) {
     if (error instanceof WidgetRenderError) throw error;
@@ -107,6 +127,45 @@ export async function fetchRepoData(ownerRepoParam: string | undefined): Promise
     }
     throw error;
   }
+}
+
+/**
+ * A repo's total contributor count isn't exposed by the GraphQL API at
+ * all — only the REST `/contributors` endpoint has it, and even that
+ * doesn't return a count directly. This uses the well-known trick (the
+ * same one shields.io uses): request 1 result per page and read the last
+ * page number out of the paginated response's `Link` header, which GitHub
+ * always includes when there's more than one page.
+ */
+export async function fetchRepoContributorCount(owner: string, name: string): Promise<number> {
+  let response: Response;
+  try {
+    response = await fetch(`https://api.github.com/repos/${owner}/${name}/contributors?per_page=1&anon=true`, {
+      headers: {
+        authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        accept: "application/vnd.github+json",
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new WidgetRenderError(`Failed to fetch contributor count: ${message}`, 502);
+  }
+
+  if (response.status === 404) {
+    throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
+  }
+  if (!response.ok) {
+    throw new WidgetRenderError(`Failed to fetch contributor count: GitHub returned ${response.status}`, 502);
+  }
+
+  const link = response.headers.get("link");
+  if (!link) {
+    const body = (await response.json()) as unknown[];
+    return Array.isArray(body) ? body.length : 0;
+  }
+
+  const match = link.match(/[?&]page=(\d+)>;\s*rel="last"/);
+  return match ? parseInt(match[1], 10) : 1;
 }
 
 export interface RawGistData {

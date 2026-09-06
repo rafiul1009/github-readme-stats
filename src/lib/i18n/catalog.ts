@@ -64,7 +64,21 @@ export type LabelKey =
   | "hourOfDay"
   | "dayOfWeek"
   | "noTrophiesData"
-  | "noCommitLanguageData";
+  | "noCommitLanguageData"
+  | "badgeRepositories"
+  | "badgeOrganization"
+  | "badgeLanguages"
+  | "badgeTotalContributors"
+  | "badgeJoinedYears"
+  | "badgeForks"
+  | "badgeContributors"
+  | "badgeWatchers"
+  | "badgeSize"
+  | "badgeUnknown"
+  | "noBadgesData"
+  | "noTechIconsData"
+  | "badgesTitle"
+  | "techIconsTitle";
 
 export const EN_CATALOG: Record<LabelKey, string> = {
   totalContributions: "Total Contributions",
@@ -120,6 +134,20 @@ export const EN_CATALOG: Record<LabelKey, string> = {
   dayOfWeek: "Day of Week",
   noTrophiesData: "No trophies matched the given filters.",
   noCommitLanguageData: "No commit data available.",
+  badgeRepositories: "Repositories",
+  badgeOrganization: "Organizations",
+  badgeLanguages: "Languages",
+  badgeTotalContributors: "Contributed To",
+  badgeJoinedYears: "Years on GitHub",
+  badgeForks: "Forks",
+  badgeContributors: "Contributors",
+  badgeWatchers: "Watchers",
+  badgeSize: "Size",
+  badgeUnknown: "Unknown",
+  noBadgesData: "No badges requested — pass name=stars,followers,...",
+  noTechIconsData: "No icons requested — pass name=react,python,...",
+  badgesTitle: "Badges",
+  techIconsTitle: "Tech Stack",
 };
 
 /**

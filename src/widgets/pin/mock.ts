@@ -13,5 +13,9 @@ export function getMockRepoData(): RawRepoData {
     stars: 1240,
     forks: 213,
     language: { name: "TypeScript", color: "#3178c6" },
+    issues: 18,
+    pullRequests: 6,
+    watchers: 42,
+    sizeKb: 8420,
   };
 }

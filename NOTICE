@@ -23,5 +23,11 @@ Theme palettes, the rank-percentile approach, and the overall widget
 catalogue were also informed by surveying the broader ecosystem of GitHub
 profile README generators, documented in full in docs/PLAN.md §2.
 
+The bundled tech-icon library (docs/TODOS.md 8.5/8.6, powering the
+`tech-icons` widget and the `/api/widget/icon/<name>` route) is
+simple-icons (https://simpleicons.org), used as a dependency rather than
+vendored — its icons are CC0-1.0 licensed by their respective brands per
+that project's own terms.
+
 If you maintain one of the projects above and believe this attribution is
 inaccurate or incomplete, please open an issue.

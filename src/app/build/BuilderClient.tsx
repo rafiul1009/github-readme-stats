@@ -18,6 +18,7 @@ const IDENTIFYING_FIELD_LABELS: Record<string, { label: string; placeholder: str
   username: { label: "GitHub username", placeholder: "e.g. octocat" },
   repo: { label: "Repository", placeholder: "owner/name" },
   id: { label: "Gist ID", placeholder: "e.g. 1345eef09799d4e6ac4c9cce08805875" },
+  name: { label: "Names", placeholder: "e.g. react,typescript,nodedotjs" },
 };
 const WIDGET_QUERY_KEY = "_widget";
 const PREVIEW_DEBOUNCE_MS = 250;
@@ -165,6 +166,7 @@ export function BuilderClient() {
                   def={entry.schema[name]}
                   value={fieldValue(entry.schema, form, name)}
                   onChange={(v) => setField(name, v)}
+                  widgetType={entry.type}
                 />
               ))}
             </div>
