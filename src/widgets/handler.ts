@@ -4,6 +4,9 @@ import { svgResponse, jsonResponse, errorResponse, svgErrorResponse } from "@/li
 import { renderSvgToPng, pngResponse } from "@/lib/render/png";
 import { getOrSetAsync, githubDataCache, renderedOutputCache, renderedPngCache } from "@/lib/cache";
 import { WidgetRenderError } from "@/widgets/errors";
+import { hasGithubToken } from "@/lib/githubAuth";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { logWidgetRequest } from "@/lib/observability";
 
 const DATA_CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -11,8 +14,8 @@ function wantsJson(searchParams: URLSearchParams): boolean {
   return searchParams.get("format") === "json";
 }
 
-function respondError(message: string, status: number, asJson: boolean): Response {
-  return asJson ? errorResponse(message, status) : svgErrorResponse(message, status);
+function respondError(message: string, status: number, asJson: boolean, retryAfterSeconds?: number): Response {
+  return asJson ? errorResponse(message, status, retryAfterSeconds) : svgErrorResponse(message, status, retryAfterSeconds);
 }
 
 /**
@@ -45,8 +48,10 @@ function isWhitelisted(candidate: string | undefined): boolean {
  */
 export async function handleWidgetRequest(
   type: string,
-  searchParams: URLSearchParams
+  searchParams: URLSearchParams,
+  clientIp: string = "unknown"
 ): Promise<Response> {
+  const startedAt = Date.now();
   const widget = getWidget(type);
   if (!widget) {
     return respondError(`Unknown widget type "${type}"`, 404, wantsJson(searchParams));
@@ -79,7 +84,7 @@ export async function handleWidgetRequest(
     return respondError("This deployment does not serve this username.", 403, asJson);
   }
 
-  if (widget.requiresGithubToken !== false && !process.env.GITHUB_TOKEN) {
+  if (widget.requiresGithubToken !== false && !hasGithubToken()) {
     return respondError("GitHub token is not configured", 500, asJson);
   }
 
@@ -92,6 +97,27 @@ export async function handleWidgetRequest(
   const suffix = widget.dataCacheKeySuffix?.(options);
   const dataCacheKey = suffix ? `${type}:${cacheKeyBase}:${suffix}` : `${type}:${cacheKeyBase}`;
 
+  // Per-IP throttle (docs/TODOS.md 10.5) applies only to renders that would
+  // actually hit GitHub — a data-cache hit costs nothing upstream, so it's
+  // exempt. Checked (not just peeked) here means it also counts this
+  // request against the bucket, same as the real cost it's about to incur.
+  const dataCacheHit = (await githubDataCache.get(dataCacheKey)) !== undefined;
+  if (!dataCacheHit) {
+    const rateLimit = checkRateLimit(clientIp);
+    if (!rateLimit.allowed) {
+      const response = respondError("Rate limit exceeded — please retry later.", 429, asJson, rateLimit.retryAfterSeconds);
+      logWidgetRequest({
+        type,
+        format,
+        status: 429,
+        durationMs: Date.now() - startedAt,
+        dataCacheHit: false,
+        error: "rate_limited",
+      });
+      return response;
+    }
+  }
+
   try {
     const raw = await getOrSetAsync(githubDataCache, dataCacheKey, DATA_CACHE_TTL_MS, () =>
       widget.fetchRawData(options)
@@ -99,10 +125,13 @@ export async function handleWidgetRequest(
     const data = widget.computeData(raw, options);
 
     if (format === "json") {
-      return jsonResponse(widget.toJson(data, options), cacheSeconds);
+      const response = jsonResponse(widget.toJson(data, options), cacheSeconds);
+      logWidgetRequest({ type, format, status: 200, durationMs: Date.now() - startedAt, dataCacheHit });
+      return response;
     }
 
     const outputCacheKey = `${type}:${normalizeOptionsForCacheKey(options)}`;
+    const renderCacheHit = (await renderedOutputCache.get(outputCacheKey)) !== undefined;
     const svg = await getOrSetAsync(renderedOutputCache, outputCacheKey, cacheSeconds * 1000, async () =>
       widget.renderSvg(data, options)
     );
@@ -111,14 +140,26 @@ export async function handleWidgetRequest(
       const png = await getOrSetAsync(renderedPngCache, outputCacheKey, cacheSeconds * 1000, async () =>
         renderSvgToPng(svg)
       );
-      return pngResponse(png, cacheSeconds);
+      const response = pngResponse(png, cacheSeconds);
+      logWidgetRequest({ type, format, status: 200, durationMs: Date.now() - startedAt, dataCacheHit, renderCacheHit });
+      return response;
     }
 
-    return svgResponse(svg, cacheSeconds);
+    const response = svgResponse(svg, cacheSeconds);
+    logWidgetRequest({ type, format, status: 200, durationMs: Date.now() - startedAt, dataCacheHit, renderCacheHit });
+    return response;
   } catch (error) {
     console.error(`Error rendering widget "${type}":`, error);
     const message = error instanceof WidgetRenderError ? error.message : `Failed to render ${type} widget`;
     const status = error instanceof WidgetRenderError ? error.status : 500;
+    logWidgetRequest({
+      type,
+      format,
+      status,
+      durationMs: Date.now() - startedAt,
+      dataCacheHit,
+      error: message,
+    });
     return respondError(message, status, asJson);
   }
 }

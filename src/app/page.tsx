@@ -30,6 +30,12 @@ export default function Home() {
         >
           Browse the gallery
         </Link>
+        <Link
+          href="/themes"
+          className="rounded-full border px-5 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Browse themes
+        </Link>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">

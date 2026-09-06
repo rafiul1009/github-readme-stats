@@ -199,6 +199,29 @@ rendered output for this widget specifically is never cached.
 Badges, Icons — of example cards, each rendered from bundled mock data and linking
 straight into the builder pre-configured with that example's widget and options.
 
+## Themes
+
+[`/themes`](/themes) previews all 77 built-in theme presets. Pass any of them as
+`theme=<name>` on any widget. A second verified batch (37 of the 77) was adopted
+verbatim from [anuraghazra/github-readme-stats](https://github.com/anuraghazra/github-readme-stats)'
+own `themes/index.js` (MIT) — see [NOTICE](NOTICE).
+
+## Scoping filters
+
+`top-langs`, `repos-per-language`, and `most-commit-language` support:
+
+- `role` — repository affiliation(s) to aggregate: `OWNER`, `ORGANIZATION_MEMBER`,
+  `COLLABORATOR` (comma-separated). Defaults to `OWNER`, matching GitHub's own
+  `RepositoryAffiliation` enum. Ignored when `owner` is set.
+- `owner` — aggregates this organization's repositories instead of `username`'s own
+  (e.g. "my language breakdown across my employer's org").
+- `repo` (top-langs and repos-per-language only) — only aggregates the listed
+  repositories, the inverse of the existing `exclude_repo`.
+
+The `stats` widget additionally supports `commits_year=<year>`, scoping the commit
+count to one specific calendar year instead of the past 12 months (overrides
+`include_all_commits` when set).
+
 ## Local development
 
 ```bash
@@ -225,6 +248,21 @@ Deploys to Vercel (or any Next.js 15 host) with no extra configuration beyond se
 the `GITHUB_TOKEN` environment variable. `tech-icons`, `typing-header`, `quote`, and
 `wakatime` don't call the GitHub API at all and work with no token configured — every
 other widget still requires one.
+
+### Scaling & hardening (optional)
+
+None of these are required — every one is unset by default and the app behaves exactly
+as it did before Phase 10.
+
+| Variable | Effect |
+| --- | --- |
+| `PAT_1`, `PAT_2`, ... `PAT_N` | Additional GitHub tokens, pooled alongside `GITHUB_TOKEN` and rotated round-robin per request — spreads load across each token's own rate limit instead of exhausting one. |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` (Vercel KV) or `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (Upstash directly) | Backs the two-tier cache with Redis so entries survive cold starts and are shared across instances/regions, on top of the existing in-memory tier. |
+| `RATE_LIMIT_PER_MINUTE` | Per-IP cap on uncached widget renders (default 30/minute). A cache hit never counts against it. |
+| `METRICS_TOKEN` | Enables `/api/internal/metrics?token=...` — request counts, cache hit rate, upstream error rate, and render-time p50/p95. Unset disables the endpoint (404) rather than defaulting to open. |
+
+A GitHub rate limit (primary or secondary) is now reported as a themed 429 error card
+with a `Retry-After` header, instead of a generic failure.
 
 ### Self-hosting with Docker
 

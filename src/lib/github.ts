@@ -1,4 +1,6 @@
 import { graphql } from '@octokit/graphql';
+import { githubAuthHeaders } from '@/lib/githubAuth';
+import { wrapGithubError } from '@/lib/githubErrors';
 
 interface ContributionDay {
   contributionCount: number;
@@ -24,11 +26,10 @@ interface UserCreatedAtData {
   };
 }
 
-const graphqlWithAuth = graphql.defaults({
-  headers: {
-    authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-  },
-});
+/** Rotates across the token pool (docs/TODOS.md 10.2) on every call, unlike `graphql.defaults`' static header. */
+function graphqlWithAuth<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  return graphql<T>(query, { ...variables, headers: githubAuthHeaders() });
+}
 
 function toISODate(date: Date): string {
   return date.toISOString();
@@ -115,9 +116,6 @@ export async function fetchContributionData(username: string): Promise<FullContr
       contributionDays,
     };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch contribution data: ${error.message}`);
-    }
-    throw error;
+    throw wrapGithubError(error, "contribution data");
   }
 }

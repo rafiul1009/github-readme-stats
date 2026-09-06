@@ -1,11 +1,12 @@
 import { graphql } from "@octokit/graphql";
 import { WidgetRenderError } from "@/widgets/errors";
+import { githubAuthHeaders } from "@/lib/githubAuth";
+import { wrapGithubError, throwIfRateLimitedResponse } from "@/lib/githubErrors";
 
-const graphqlWithAuth = graphql.defaults({
-  headers: {
-    authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-  },
-});
+/** Rotates across the token pool (docs/TODOS.md 10.2) on every call, unlike `graphql.defaults`' static header. */
+function graphqlWithAuth<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  return graphql<T>(query, { ...variables, headers: githubAuthHeaders() });
+}
 
 /**
  * @octokit/graphql throws (rather than just returning `data.repository:
@@ -122,10 +123,7 @@ export async function fetchRepoData(ownerRepoParam: string | undefined): Promise
     if (isNotFoundGraphqlError(error)) {
       throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
     }
-    if (error instanceof Error) {
-      throw new WidgetRenderError(`Failed to fetch repository: ${error.message}`, 500);
-    }
-    throw error;
+    throw wrapGithubError(error, "repository");
   }
 }
 
@@ -142,7 +140,7 @@ export async function fetchRepoContributorCount(owner: string, name: string): Pr
   try {
     response = await fetch(`https://api.github.com/repos/${owner}/${name}/contributors?per_page=1&anon=true`, {
       headers: {
-        authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        ...githubAuthHeaders(),
         accept: "application/vnd.github+json",
       },
     });
@@ -154,6 +152,7 @@ export async function fetchRepoContributorCount(owner: string, name: string): Pr
   if (response.status === 404) {
     throw new WidgetRenderError(`Repository "${owner}/${name}" not found`, 404);
   }
+  throwIfRateLimitedResponse(response);
   if (!response.ok) {
     throw new WidgetRenderError(`Failed to fetch contributor count: GitHub returned ${response.status}`, 502);
   }
@@ -198,7 +197,7 @@ export async function fetchGistData(gistId: string | undefined): Promise<RawGist
   try {
     response = await fetch(`https://api.github.com/gists/${gistId}`, {
       headers: {
-        authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        ...githubAuthHeaders(),
         accept: "application/vnd.github+json",
       },
     });
@@ -210,6 +209,7 @@ export async function fetchGistData(gistId: string | undefined): Promise<RawGist
   if (response.status === 404) {
     throw new WidgetRenderError(`Gist "${gistId}" not found`, 404);
   }
+  throwIfRateLimitedResponse(response);
   if (!response.ok) {
     throw new WidgetRenderError(`Failed to fetch gist: GitHub returned ${response.status}`, 502);
   }

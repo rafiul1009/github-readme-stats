@@ -1,4 +1,4 @@
-import { fetchLanguageData, type RawLanguageData } from "@/lib/githubStats";
+import { fetchLanguageData, repoScopeCacheKeySuffix, type RawLanguageData } from "@/lib/githubStats";
 import { aggregateLanguages, type LanguageStat } from "@/lib/languages";
 import { getTheme } from "@/lib/themes";
 import { registerWidget } from "@/widgets/registry";
@@ -7,12 +7,22 @@ import { ReposPerLanguageCard } from "./ReposPerLanguageCard";
 import { getMockLanguageData } from "./mock";
 import { REPOS_PER_LANGUAGE_SCHEMA, type ReposPerLanguageOptions } from "./schema";
 
+// role/owner (docs/TODOS.md 10.3) change what's fetched, so they need a
+// data-cache key suffix (below) rather than living in computeData.
 async function fetchReposPerLanguageRawData(options: ReposPerLanguageOptions): Promise<RawLanguageData> {
-  return fetchLanguageData(options.username);
+  return fetchLanguageData(options.username, { role: options.role, owner: options.owner as string | undefined });
+}
+
+function reposPerLanguageDataCacheKeySuffix(options: ReposPerLanguageOptions): string {
+  return repoScopeCacheKeySuffix({ role: options.role, owner: options.owner as string | undefined });
 }
 
 function computeReposPerLanguageData(raw: RawLanguageData, options: ReposPerLanguageOptions): LanguageStat[] {
-  const languages = aggregateLanguages(raw, { excludeRepos: options.exclude_repo, hide: options.hide });
+  const languages = aggregateLanguages(raw, {
+    excludeRepos: options.exclude_repo,
+    includeRepos: options.repo,
+    hide: options.hide,
+  });
   return languages
     .slice()
     .sort((a, b) => b.repoCount - a.repoCount)
@@ -50,6 +60,7 @@ registerWidget({
   type: "repos-per-language",
   schema: REPOS_PER_LANGUAGE_SCHEMA,
   cacheSecondsDefault: 3600,
+  dataCacheKeySuffix: reposPerLanguageDataCacheKeySuffix,
   fetchRawData: fetchReposPerLanguageRawData,
   computeData: computeReposPerLanguageData,
   renderSvg: renderReposPerLanguageSvg,

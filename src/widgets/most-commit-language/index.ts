@@ -1,4 +1,4 @@
-import { fetchCommitLanguageData, type RawCommitLanguageData } from "@/lib/githubStats";
+import { fetchCommitLanguageData, repoScopeCacheKeySuffix, type RawCommitLanguageData } from "@/lib/githubStats";
 import { aggregateCommitLanguages, type CommitLanguageStat } from "@/lib/commitLanguages";
 import { getTheme } from "@/lib/themes";
 import { registerWidget } from "@/widgets/registry";
@@ -7,8 +7,17 @@ import { MostCommitLanguageCard } from "./MostCommitLanguageCard";
 import { getMockCommitLanguageData } from "./mock";
 import { MOST_COMMIT_LANGUAGE_SCHEMA, type MostCommitLanguageOptions } from "./schema";
 
+// role/owner (docs/TODOS.md 10.3) change what's fetched, so they need a
+// data-cache key suffix (below) rather than living in computeData.
 async function fetchMostCommitLanguageRawData(options: MostCommitLanguageOptions): Promise<RawCommitLanguageData> {
-  return fetchCommitLanguageData(options.username);
+  return fetchCommitLanguageData(options.username, {
+    role: options.role,
+    owner: options.owner as string | undefined,
+  });
+}
+
+function mostCommitLanguageDataCacheKeySuffix(options: MostCommitLanguageOptions): string {
+  return repoScopeCacheKeySuffix({ role: options.role, owner: options.owner as string | undefined });
 }
 
 function computeMostCommitLanguageData(raw: RawCommitLanguageData, options: MostCommitLanguageOptions): CommitLanguageStat[] {
@@ -46,6 +55,7 @@ registerWidget({
   type: "most-commit-language",
   schema: MOST_COMMIT_LANGUAGE_SCHEMA,
   cacheSecondsDefault: 3600,
+  dataCacheKeySuffix: mostCommitLanguageDataCacheKeySuffix,
   fetchRawData: fetchMostCommitLanguageRawData,
   computeData: computeMostCommitLanguageData,
   renderSvg: renderMostCommitLanguageSvg,

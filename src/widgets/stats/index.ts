@@ -6,15 +6,19 @@ import { StatsCard } from "./StatsCard";
 import { getMockUserStats } from "./mock";
 import { STATS_SCHEMA, type StatsOptions } from "./schema";
 
-// include_all_commits changes what's fetched (a second, more expensive
-// query), so — unlike the streak widget's mode/exclude_days/etc., which
-// only affect derivation — it needs its own data-cache key suffix (below)
-// rather than living in computeData.
+// include_all_commits and commits_year (docs/TODOS.md 10.3) both change
+// what's fetched (a second/different query), so — unlike the streak
+// widget's mode/exclude_days/etc., which only affect derivation — they
+// need their own data-cache key suffix (below) rather than living in
+// computeData. commits_year, when set, wins over include_all_commits.
 async function fetchStatsRawData(options: StatsOptions): Promise<RawUserStats> {
-  return fetchUserStats(options.username, options.include_all_commits);
+  const commitsYear = options.commits_year as number | undefined;
+  return fetchUserStats(options.username, options.include_all_commits, commitsYear);
 }
 
 function statsDataCacheKeySuffix(options: StatsOptions): string {
+  const commitsYear = options.commits_year as number | undefined;
+  if (commitsYear) return `year:${commitsYear}`;
   return options.include_all_commits ? "all-commits" : "year-commits";
 }
 

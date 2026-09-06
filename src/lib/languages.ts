@@ -11,6 +11,8 @@ export interface LanguageStat {
 
 export interface AggregateLanguagesOptions {
   excludeRepos?: string[];
+  /** Scoping filter (docs/TODOS.md 10.3) — when set, only these repos are aggregated; excludeRepos still applies on top. */
+  includeRepos?: string[];
   hide?: string[];
   /** Ranking: (bytes ^ sizeWeight) * (repoCount ^ countWeight). Defaults to pure byte-size ranking. */
   sizeWeight?: number;
@@ -29,6 +31,9 @@ export function aggregateLanguages(
   options: AggregateLanguagesOptions = {}
 ): LanguageStat[] {
   const excludeRepos = new Set((options.excludeRepos ?? []).map((r) => r.toLowerCase()));
+  const includeRepos = options.includeRepos?.length
+    ? new Set(options.includeRepos.map((r) => r.toLowerCase()))
+    : undefined;
   const hide = new Set((options.hide ?? []).map((l) => l.toLowerCase()));
   const sizeWeight = options.sizeWeight ?? 1;
   const countWeight = options.countWeight ?? 0;
@@ -37,6 +42,7 @@ export function aggregateLanguages(
 
   for (const repo of data.repos) {
     if (excludeRepos.has(repo.name.toLowerCase())) continue;
+    if (includeRepos && !includeRepos.has(repo.name.toLowerCase())) continue;
 
     for (const lang of repo.languages) {
       if (hide.has(lang.name.toLowerCase())) continue;

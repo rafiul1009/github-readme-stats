@@ -11,7 +11,10 @@ deliberately derived from the following prior art, per docs/PLAN.md §7 D10:
 - anuraghazra/github-readme-stats — parameter vocabulary and option naming
   conventions (`hide`, `show`, `bg_color`, `hide_border`, `layout`,
   `langs_count`, `custom_title`, ...) followed per docs/PLAN.md §7 D9, and
-  the general shape of the stats/top-languages/pin/gist cards.
+  the general shape of the stats/top-languages/pin/gist cards. A batch of
+  37 theme presets (docs/TODOS.md 10.4) was also adopted verbatim from its
+  `themes/index.js` (MIT) — real, verified hex values rather than an
+  invented palette.
 - ryo-ma/github-profile-trophy — trophy rank tiers and standard-trophy
   threshold values (Stars/Commits/Followers/Issues/PullRequests/Repositories
   and the multi-language/multi-org/long-time-account secret-trophy

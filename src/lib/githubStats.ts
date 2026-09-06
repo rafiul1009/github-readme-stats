@@ -1,10 +1,40 @@
 import { graphql } from "@octokit/graphql";
+import { githubAuthHeaders } from "@/lib/githubAuth";
+import { wrapGithubError } from "@/lib/githubErrors";
 
-const graphqlWithAuth = graphql.defaults({
-  headers: {
-    authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-  },
-});
+/** Rotates across the token pool (docs/TODOS.md 10.2) on every call, unlike `graphql.defaults`' static header. */
+function graphqlWithAuth<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  return graphql<T>(query, { ...variables, headers: githubAuthHeaders() });
+}
+
+/**
+ * Repo-scoping filters shared by every repo-aggregating query in this file
+ * (docs/TODOS.md 10.3). `role` maps directly onto GitHub's own
+ * RepositoryAffiliation enum and only applies to a user-owned query;
+ * setting `owner` switches the aggregation to that organization's repos
+ * entirely (an org has no concept of "affiliation" — it's not relative to
+ * a user — so `role` is ignored whenever `owner` is set).
+ */
+export type RepoRole = "OWNER" | "ORGANIZATION_MEMBER" | "COLLABORATOR";
+const VALID_ROLES: readonly RepoRole[] = ["OWNER", "ORGANIZATION_MEMBER", "COLLABORATOR"];
+
+export interface RepoScopeOptions {
+  role?: string[];
+  owner?: string;
+}
+
+function normalizeRoles(role: string[] | undefined): RepoRole[] {
+  const roles = (role ?? [])
+    .map((r) => r.trim().toUpperCase())
+    .filter((r): r is RepoRole => (VALID_ROLES as string[]).includes(r));
+  return roles.length > 0 ? roles : ["OWNER"];
+}
+
+/** Cache-key-safe fragment capturing a scope's effect on what's fetched (docs/TODOS.md 10.3). */
+export function repoScopeCacheKeySuffix(scope: RepoScopeOptions): string {
+  if (scope.owner) return `owner:${scope.owner.toLowerCase()}`;
+  return `role:${normalizeRoles(scope.role).join(",")}`;
+}
 
 export interface RawUserStats {
   name: string | null;
@@ -58,8 +88,13 @@ interface UserStatsQueryResult {
   };
 }
 
+/**
+ * `$from`/`$to` are nullable — omitted (docs/TODOS.md 10.3's `commits_year`
+ * unset), GitHub's contributionsCollection defaults to the past 12 months,
+ * matching prior behavior exactly.
+ */
 const USER_STATS_QUERY = `
-  query($username: String!) {
+  query($username: String!, $from: DateTime, $to: DateTime) {
     user(login: $username) {
       name
       login
@@ -79,7 +114,7 @@ const USER_STATS_QUERY = `
       repositoriesContributedTo(first: 1, contributionTypes: [COMMIT, ISSUE, PULL_REQUEST, REPOSITORY]) {
         totalCount
       }
-      contributionsCollection {
+      contributionsCollection(from: $from, to: $to) {
         totalCommitContributions
         totalPullRequestReviewContributions
       }
@@ -88,6 +123,14 @@ const USER_STATS_QUERY = `
     }
   }
 `;
+
+/** Calendar-year UTC bounds for the `commits_year` scoping filter (docs/TODOS.md 10.3). */
+function yearBounds(year: number): { from: string; to: string } {
+  return {
+    from: new Date(Date.UTC(year, 0, 1)).toISOString(),
+    to: new Date(Date.UTC(year, 11, 31, 23, 59, 59)).toISOString(),
+  };
+}
 
 /**
  * GitHub's contributionsCollection covers at most one year per call, so an
@@ -127,9 +170,14 @@ async function fetchAllTimeCommits(username: string, createdAt: string): Promise
   return ranges.reduce((sum, { alias }) => sum + user[alias].totalCommitContributions, 0);
 }
 
-export async function fetchUserStats(username: string, includeAllCommits: boolean): Promise<RawUserStats> {
+export async function fetchUserStats(
+  username: string,
+  includeAllCommits: boolean,
+  commitsYear?: number
+): Promise<RawUserStats> {
   try {
-    const data = await graphqlWithAuth<UserStatsQueryResult>(USER_STATS_QUERY, { username });
+    const bounds = commitsYear ? yearBounds(commitsYear) : { from: undefined, to: undefined };
+    const data = await graphqlWithAuth<UserStatsQueryResult>(USER_STATS_QUERY, { username, ...bounds });
     const user = data.user;
 
     const totalStars = user.repositories.nodes.reduce((sum, repo) => sum + repo.stargazerCount, 0);
@@ -162,10 +210,7 @@ export async function fetchUserStats(username: string, includeAllCommits: boolea
       organizationsCount: user.organizations.totalCount,
     };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch user stats: ${error.message}`);
-    }
-    throw error;
+    throw wrapGithubError(error, "user stats");
   }
 }
 
@@ -190,10 +235,27 @@ interface LanguageStatsQueryResult {
   };
 }
 
-const LANGUAGE_STATS_QUERY = `
-  query($username: String!) {
-    user(login: $username) {
-      repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
+function languageStatsQuery(roles: RepoRole[]): string {
+  return `
+    query($username: String!) {
+      user(login: $username) {
+        repositories(ownerAffiliations: [${roles.join(", ")}], isFork: false, first: 100) {
+          nodes {
+            name
+            languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
+              edges { size node { name color } }
+            }
+          }
+        }
+      }
+    }
+  `;
+}
+
+const LANGUAGE_STATS_ORG_QUERY = `
+  query($login: String!) {
+    organization(login: $login) {
+      repositories(isFork: false, first: 100) {
         nodes {
           name
           languages(first: 10, orderBy: { field: SIZE, direction: DESC }) {
@@ -205,18 +267,37 @@ const LANGUAGE_STATS_QUERY = `
   }
 `;
 
+interface LanguageStatsOrgQueryResult {
+  organization: LanguageStatsQueryResult["user"] | null;
+}
+
 /**
- * Language usage is scoped to a user's own first 100 non-fork repositories
- * — a GitHub API pagination limit shared by every reference implementation
- * (documented in docs/PLAN.md §8), not something we can lift without
- * multi-page fetching across a user's entire repo history.
+ * Language usage is scoped to the first 100 non-fork repositories matching
+ * the requested scope — a GitHub API pagination limit shared by every
+ * reference implementation (documented in docs/PLAN.md §8), not something
+ * we can lift without multi-page fetching. `scope` (docs/TODOS.md 10.3)
+ * defaults to the user's own OWNER-affiliated repos, matching prior
+ * behavior exactly when left unset.
  */
-export async function fetchLanguageData(username: string): Promise<RawLanguageData> {
+export async function fetchLanguageData(username: string, scope: RepoScopeOptions = {}): Promise<RawLanguageData> {
   try {
-    const data = await graphqlWithAuth<LanguageStatsQueryResult>(LANGUAGE_STATS_QUERY, { username });
+    let nodes: LanguageStatsQueryResult["user"]["repositories"]["nodes"];
+    if (scope.owner) {
+      const data = await graphqlWithAuth<LanguageStatsOrgQueryResult>(LANGUAGE_STATS_ORG_QUERY, {
+        login: scope.owner,
+      });
+      if (!data.organization) {
+        throw new Error(`Organization "${scope.owner}" not found`);
+      }
+      nodes = data.organization.repositories.nodes;
+    } else {
+      const roles = normalizeRoles(scope.role);
+      const data = await graphqlWithAuth<LanguageStatsQueryResult>(languageStatsQuery(roles), { username });
+      nodes = data.user.repositories.nodes;
+    }
 
     return {
-      repos: data.user.repositories.nodes.map((repo) => ({
+      repos: nodes.map((repo) => ({
         name: repo.name,
         languages: (repo.languages?.edges ?? []).map((edge) => ({
           name: edge.node.name,
@@ -226,10 +307,7 @@ export async function fetchLanguageData(username: string): Promise<RawLanguageDa
       })),
     };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch language data: ${error.message}`);
-    }
-    throw error;
+    throw wrapGithubError(error, "language data");
   }
 }
 
@@ -254,10 +332,31 @@ interface CommitLanguageQueryResult {
   };
 }
 
-const COMMIT_LANGUAGE_QUERY = `
-  query($username: String!) {
-    user(login: $username) {
-      repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
+function commitLanguageQuery(roles: RepoRole[]): string {
+  return `
+    query($username: String!) {
+      user(login: $username) {
+        repositories(ownerAffiliations: [${roles.join(", ")}], isFork: false, first: 100) {
+          nodes {
+            primaryLanguage { name color }
+            defaultBranchRef {
+              target {
+                ... on Commit {
+                  history { totalCount }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+}
+
+const COMMIT_LANGUAGE_ORG_QUERY = `
+  query($login: String!) {
+    organization(login: $login) {
+      repositories(isFork: false, first: 100) {
         nodes {
           primaryLanguage { name color }
           defaultBranchRef {
@@ -273,22 +372,45 @@ const COMMIT_LANGUAGE_QUERY = `
   }
 `;
 
+interface CommitLanguageOrgQueryResult {
+  organization: CommitLanguageQueryResult["user"] | null;
+}
+
 /**
- * Commits-per-language (docs/TODOS.md 7.6): attributes each owned non-fork
- * repo's *entire* default-branch commit count to its primary language.
- * This is a deliberate simplification, not "commits literally authored by
- * this user" (that would require an author-filtered sub-query per repo, a
- * second round trip per repo) — a reasonable proxy given the repos are all
- * ownerAffiliations: OWNER, where the owner accounts for nearly all commits
- * in practice. Same first-100-repos ceiling as language/repo aggregation
- * elsewhere in this file.
+ * Commits-per-language (docs/TODOS.md 7.6): attributes each in-scope
+ * non-fork repo's *entire* default-branch commit count to its primary
+ * language. This is a deliberate simplification, not "commits literally
+ * authored by this user" (that would require an author-filtered sub-query
+ * per repo, a second round trip per repo) — a reasonable proxy given the
+ * default scope is ownerAffiliations: OWNER, where the owner accounts for
+ * nearly all commits in practice; widening `scope.role` to include
+ * COLLABORATOR/ORGANIZATION_MEMBER repos weakens that assumption somewhat,
+ * which is an accepted tradeoff of opting into the wider scope
+ * (docs/TODOS.md 10.3). Same first-100-repos ceiling as language/repo
+ * aggregation elsewhere in this file.
  */
-export async function fetchCommitLanguageData(username: string): Promise<RawCommitLanguageData> {
+export async function fetchCommitLanguageData(
+  username: string,
+  scope: RepoScopeOptions = {}
+): Promise<RawCommitLanguageData> {
   try {
-    const data = await graphqlWithAuth<CommitLanguageQueryResult>(COMMIT_LANGUAGE_QUERY, { username });
+    let nodes: CommitLanguageQueryResult["user"]["repositories"]["nodes"];
+    if (scope.owner) {
+      const data = await graphqlWithAuth<CommitLanguageOrgQueryResult>(COMMIT_LANGUAGE_ORG_QUERY, {
+        login: scope.owner,
+      });
+      if (!data.organization) {
+        throw new Error(`Organization "${scope.owner}" not found`);
+      }
+      nodes = data.organization.repositories.nodes;
+    } else {
+      const roles = normalizeRoles(scope.role);
+      const data = await graphqlWithAuth<CommitLanguageQueryResult>(commitLanguageQuery(roles), { username });
+      nodes = data.user.repositories.nodes;
+    }
 
     const entries: RawCommitLanguageEntry[] = [];
-    for (const repo of data.user.repositories.nodes) {
+    for (const repo of nodes) {
       if (!repo.primaryLanguage) continue;
       const commits = repo.defaultBranchRef?.target?.history.totalCount ?? 0;
       if (commits === 0) continue;
@@ -297,10 +419,7 @@ export async function fetchCommitLanguageData(username: string): Promise<RawComm
 
     return { entries };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch commit-language data: ${error.message}`);
-    }
-    throw error;
+    throw wrapGithubError(error, "commit-language data");
   }
 }
 
@@ -359,9 +478,6 @@ export async function fetchProductiveTimeData(username: string): Promise<RawProd
 
     return { commitDates };
   } catch (error) {
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch productive-time data: ${error.message}`);
-    }
-    throw error;
+    throw wrapGithubError(error, "productive-time data");
   }
 }

@@ -31,6 +31,11 @@ export const STATS_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
     description: "Counts all-time commits instead of just the current year's.",
     default: false,
   },
+  commits_year: {
+    type: "number",
+    description: "Scopes the commit count to one specific calendar year instead of the past 12 months. Overrides include_all_commits when set.",
+    min: 2005,
+  },
   line_height: {
     type: "number",
     description: "Vertical spacing between stat rows, in pixels.",

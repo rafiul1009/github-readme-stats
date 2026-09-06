@@ -35,8 +35,11 @@ export function jsonResponse(data: unknown, cacheSeconds: number): Response {
   });
 }
 
-export function errorResponse(message: string, status: number): Response {
-  return new Response(message, { status });
+export function errorResponse(message: string, status: number, retryAfterSeconds?: number): Response {
+  return new Response(message, {
+    status,
+    headers: retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : undefined,
+  });
 }
 
 /**
@@ -45,13 +48,14 @@ export function errorResponse(message: string, status: number): Response {
  * response, so a failed svg-format request should still return something
  * readable rather than a broken-image icon.
  */
-export function svgErrorResponse(message: string, status: number): Response {
+export function svgErrorResponse(message: string, status: number, retryAfterSeconds?: number): Response {
   const svg = renderJsxToSvg(ErrorCard({ message }));
   return new Response(svg, {
     status,
     headers: {
       "Content-Type": "image/svg+xml",
       "Cache-Control": "no-store",
+      ...(retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : {}),
     },
   });
 }

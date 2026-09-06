@@ -30,6 +30,18 @@ export const TOP_LANGS_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
     type: "commaList",
     description: "Excludes the specified repositories from the language aggregation.",
   },
+  repo: {
+    type: "commaList",
+    description: "Only aggregates the specified repositories (an allowlist), instead of all of them.",
+  },
+  role: {
+    type: "commaList",
+    description: "Repository affiliation(s) to aggregate: OWNER, ORGANIZATION_MEMBER, COLLABORATOR. Defaults to OWNER. Ignored when owner is set.",
+  },
+  owner: {
+    type: "string",
+    description: "Aggregates this organization's repositories instead of username's own.",
+  },
   hide_progress: {
     type: "boolean",
     description: "Hides percentages and progress bars (layout becomes compact).",
