@@ -27,6 +27,7 @@ function renderGistSvg(data: RawGistData, options: GistOptions): string {
         title: options.title_color,
         text: options.text_color,
       },
+      locale: options.locale,
       disableAnimations: options.disable_animations,
       hideBorder: options.hide_border,
       borderRadius: options.border_radius,

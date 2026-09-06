@@ -1,0 +1,23 @@
+NOTICE
+
+This project is licensed under the MIT License (see LICENSE). It is an
+independent reimplementation — no code is copied from the projects below —
+but several design decisions, parameter names, and reference values are
+deliberately derived from the following prior art, per docs/PLAN.md §7 D10:
+
+- DenverCoder1/github-readme-streak-stats — the direct ancestor of this
+  project's streak card: streak/weekly-mode semantics, exclude_days
+  behavior, and the `date_format` bracket-conditional-year convention.
+- anuraghazra/github-readme-stats — parameter vocabulary and option naming
+  conventions (`hide`, `show`, `bg_color`, `hide_border`, `layout`,
+  `langs_count`, `custom_title`, ...) followed per docs/PLAN.md §7 D9, and
+  the general shape of the stats/top-languages/pin/gist cards.
+- ryo-ma/github-profile-trophy — trophy rank tiers and naming conventions
+  (planned for a later phase; credited in advance per D7).
+
+Theme palettes, the rank-percentile approach, and the overall widget
+catalogue were also informed by surveying the broader ecosystem of GitHub
+profile README generators, documented in full in docs/PLAN.md §2.
+
+If you maintain one of the projects above and believe this attribution is
+inaccurate or incomplete, please open an issue.

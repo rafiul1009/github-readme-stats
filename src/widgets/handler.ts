@@ -1,7 +1,8 @@
 import { getWidget } from "@/widgets/registry";
 import { parseOptions, normalizeOptionsForCacheKey, OptionValidationError } from "@/lib/options";
 import { svgResponse, jsonResponse, errorResponse, svgErrorResponse } from "@/lib/render/svg";
-import { getOrSetAsync, githubDataCache, renderedOutputCache } from "@/lib/cache";
+import { renderSvgToPng, pngResponse } from "@/lib/render/png";
+import { getOrSetAsync, githubDataCache, renderedOutputCache, renderedPngCache } from "@/lib/cache";
 import { WidgetRenderError } from "@/widgets/errors";
 
 const DATA_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -12,6 +13,28 @@ function wantsJson(searchParams: URLSearchParams): boolean {
 
 function respondError(message: string, status: number, asJson: boolean): Response {
   return asJson ? errorResponse(message, status) : svgErrorResponse(message, status);
+}
+
+/**
+ * Self-host access control (docs/TODOS.md 5.9): when `WHITELIST` is set, a
+ * self-hosted instance serves only the listed usernames — useful for a
+ * private/personal deployment that shouldn't act as a public proxy for
+ * arbitrary GitHub accounts. Unset (the default) serves everyone. Only
+ * enforced when an owning username is actually known: the pin widget's
+ * `owner/repo` is checked by its owner segment, but the gist widget (keyed
+ * by an opaque id with no owner available without an extra fetch) is not
+ * restricted — a self-hoster who needs that guarantee should disable the
+ * gist widget entirely rather than rely on partial enforcement here.
+ */
+function isWhitelisted(candidate: string | undefined): boolean {
+  const raw = process.env.WHITELIST;
+  if (!raw) return true;
+  if (!candidate) return true;
+  const allowed = raw
+    .split(",")
+    .map((u) => u.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(candidate.toLowerCase());
 }
 
 /**
@@ -41,10 +64,19 @@ export async function handleWidgetRequest(
 
   const format = (options.format as string | undefined) ?? "svg";
   const asJson = format === "json";
+  // PNG rasterizes a single static frame (D3/5.8) — animations would just
+  // freeze mid-fade, so force them off regardless of what was requested.
+  if (format === "png") options.disable_animations = true;
 
   const username = options.username as string | undefined;
   if (widget.requiresUsername !== false && !username) {
     return respondError("username parameter is required", 400, asJson);
+  }
+
+  const repoOption = typeof options.repo === "string" ? options.repo : undefined;
+  const whitelistSubject = username ?? repoOption?.split("/")[0];
+  if (!isWhitelisted(whitelistSubject)) {
+    return respondError("This deployment does not serve this username.", 403, asJson);
   }
 
   if (!process.env.GITHUB_TOKEN) {
@@ -74,6 +106,13 @@ export async function handleWidgetRequest(
     const svg = await getOrSetAsync(renderedOutputCache, outputCacheKey, cacheSeconds * 1000, async () =>
       widget.renderSvg(data, options)
     );
+
+    if (format === "png") {
+      const png = await getOrSetAsync(renderedPngCache, outputCacheKey, cacheSeconds * 1000, async () =>
+        renderSvgToPng(svg)
+      );
+      return pngResponse(png, cacheSeconds);
+    }
 
     return svgResponse(svg, cacheSeconds);
   } catch (error) {
@@ -114,6 +153,7 @@ export async function handlePreviewRequest(type: string, searchParams: URLSearch
 
   const format = (options.format as string | undefined) ?? "svg";
   const asJson = format === "json";
+  if (format === "png") options.disable_animations = true;
 
   try {
     const raw = widget.mockRawData(options);
@@ -124,6 +164,14 @@ export async function handlePreviewRequest(type: string, searchParams: URLSearch
     }
 
     const svg = widget.renderSvg(data, options);
+
+    if (format === "png") {
+      const png = renderSvgToPng(svg);
+      return new Response(new Uint8Array(png), {
+        headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
+      });
+    }
+
     return new Response(svg, {
       headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" },
     });

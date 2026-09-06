@@ -35,6 +35,7 @@ function renderTopLangsSvg(data: LanguageStat[], options: TopLangsOptions): stri
         title: options.title_color,
         text: options.text_color,
       },
+      locale: options.locale,
       disableAnimations: options.disable_animations,
       hideBorder: options.hide_border,
       hideTitle: options.hide_title,

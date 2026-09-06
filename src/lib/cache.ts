@@ -45,6 +45,9 @@ export const githubDataCache = new TtlCache<unknown>(DATA_CACHE_TTL_MS);
 /** Rendered SVG/JSON output, keyed by widget type + the full normalized option set. */
 export const renderedOutputCache = new TtlCache<string>(DEFAULT_RENDER_CACHE_TTL_MS);
 
+/** Rasterized PNG output (task 5.8), keyed the same way plus a `:png` suffix — separate from the SVG cache since it holds Buffers, not strings. */
+export const renderedPngCache = new TtlCache<Buffer>(DEFAULT_RENDER_CACHE_TTL_MS);
+
 /** Fetches `key` from `cache`, computing and storing it via `compute` on a miss. */
 export async function getOrSetAsync<T>(
   cache: TtlCache<T>,

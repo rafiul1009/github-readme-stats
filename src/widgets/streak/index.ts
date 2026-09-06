@@ -38,6 +38,8 @@ function renderStreakSvg(data: StreakInfo, options: StreakOptions): string {
       },
       font: options.font,
       numberFormat: options.number_format,
+      locale: options.locale,
+      dateFormat: options.date_format,
       hideTotalContributions: options.hide_total_contributions,
       hideCurrentStreak: options.hide_current_streak,
       hideLongestStreak: options.hide_longest_streak,

@@ -1,8 +1,9 @@
-import { Card, FadeIn, FadeInKeyframes } from "@/components/card";
+import { Card, FadeIn, FadeInKeyframes, RtlMirror } from "@/components/card";
 import { resolveThemeSlots, type ThemeDefinition } from "@/lib/themes";
 import { normalizeOverrideColor, parseColorValue } from "@/lib/color";
 import { wrapText } from "@/lib/text";
 import { formatNumber } from "@/lib/format";
+import { t, isRtlLocale } from "@/lib/i18n";
 import type { RawRepoData } from "@/lib/githubRepo";
 import { RepoIcon, StarIcon, ForkIcon } from "./icons";
 
@@ -20,6 +21,7 @@ export interface PinCardProps {
   descriptionLinesCount?: number;
   theme: ThemeDefinition;
   overrides?: PinCardOverrides;
+  locale?: string;
   disableAnimations?: boolean;
   hideBorder?: boolean;
   borderRadius?: number;
@@ -39,6 +41,7 @@ export function PinCard({
   descriptionLinesCount,
   theme,
   overrides = {},
+  locale = "en",
   disableAnimations = false,
   hideBorder = false,
   borderRadius = 4.5,
@@ -52,6 +55,7 @@ export function PinCard({
     icon: normalizeOverrideColor(overrides.icon),
   });
   const background = overrides.background ? parseColorValue(overrides.background) : colors.background;
+  const rtl = isRtlLocale(locale);
 
   const title = showOwner ? `${repo.owner}/${repo.name}` : repo.name;
   const maxChars = Math.max(Math.floor((width - 50) / CHAR_WIDTH_ESTIMATE), 10);
@@ -60,9 +64,9 @@ export function PinCard({
   const reservedLines = descriptionLinesCount ?? Math.max(descLines.length, 1);
 
   const badges: string[] = [];
-  if (repo.isArchived) badges.push("Archived");
-  if (repo.isTemplate) badges.push("Template");
-  if (repo.isFork) badges.push("Fork");
+  if (repo.isArchived) badges.push(t(locale, "archived"));
+  if (repo.isTemplate) badges.push(t(locale, "template"));
+  if (repo.isFork) badges.push(t(locale, "fork"));
 
   const height = 45 + reservedLines * 18 + 45;
   const footerY = height - 22;
@@ -77,56 +81,75 @@ export function PinCard({
       borderWidth={borderWidth}
       hideBorder={hideBorder}
       idPrefix="pin"
+      rtl={rtl}
     >
       <FadeInKeyframes />
 
       <FadeIn delay={0} disabled={disableAnimations}>
-        <g transform="translate(20, 22)">
-          <RepoIcon color={colors.icon} />
-          <text x={22} y={5} fill={colors.title} fontFamily={FONT} fontWeight={700} fontSize={15}>
-            {title}
-          </text>
-        </g>
+        <RtlMirror x={20} rtl={rtl}>
+          <g transform="translate(20, 22)">
+            <RepoIcon color={colors.icon} />
+            <text x={22} y={5} fill={colors.title} fontFamily={FONT} fontWeight={700} fontSize={15}>
+              {title}
+            </text>
+          </g>
+        </RtlMirror>
       </FadeIn>
 
       {badges.length > 0 && (
         <FadeIn delay={0.1} disabled={disableAnimations}>
-          <text x={width - 20} y={18} textAnchor="end" fill={colors.text} fontFamily={FONT} fontSize={10} opacity={0.7}>
-            {badges.join(" · ")}
-          </text>
+          <RtlMirror x={width - 20} rtl={rtl}>
+            <text x={width - 20} y={18} textAnchor="end" fill={colors.text} fontFamily={FONT} fontSize={10} opacity={0.7}>
+              {badges.join(" · ")}
+            </text>
+          </RtlMirror>
         </FadeIn>
       )}
 
       {descLines.map((line, i) => (
         <FadeIn key={i} delay={0.15 + i * 0.05} disabled={disableAnimations}>
-          <text x={20} y={48 + i * 18} fill={colors.text} fontFamily={FONT} fontSize={12}>
-            {line}
-          </text>
+          <RtlMirror x={20} rtl={rtl}>
+            <text x={20} y={48 + i * 18} fill={colors.text} fontFamily={FONT} fontSize={12}>
+              {line}
+            </text>
+          </RtlMirror>
         </FadeIn>
       ))}
 
       <FadeIn delay={0.3} disabled={disableAnimations}>
         <g transform={`translate(20, ${footerY})`}>
           {repo.language && (
-            <g>
-              <circle cx={5} cy={-4} r={5} fill={repo.language.color} />
-              <text x={16} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
-                {repo.language.name}
-              </text>
-            </g>
+            <>
+              <RtlMirror x={5} rtl={rtl}>
+                <circle cx={5} cy={-4} r={5} fill={repo.language.color} />
+              </RtlMirror>
+              <RtlMirror x={16} rtl={rtl}>
+                <text x={16} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
+                  {repo.language.name}
+                </text>
+              </RtlMirror>
+            </>
           )}
-          <g transform={`translate(${repo.language ? 120 : 0}, -8)`}>
-            <StarIcon color={colors.text} />
-          </g>
-          <text x={(repo.language ? 120 : 0) + 18} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
-            {formatNumber(repo.stars, "short")}
-          </text>
-          <g transform={`translate(${(repo.language ? 120 : 0) + 60}, -8)`}>
-            <ForkIcon color={colors.text} />
-          </g>
-          <text x={(repo.language ? 120 : 0) + 60 + 18} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
-            {formatNumber(repo.forks, "short")}
-          </text>
+          <RtlMirror x={repo.language ? 120 : 0} rtl={rtl}>
+            <g transform={`translate(${repo.language ? 120 : 0}, -8)`}>
+              <StarIcon color={colors.text} />
+            </g>
+          </RtlMirror>
+          <RtlMirror x={(repo.language ? 120 : 0) + 18} rtl={rtl}>
+            <text x={(repo.language ? 120 : 0) + 18} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
+              {formatNumber(repo.stars, "short", locale)}
+            </text>
+          </RtlMirror>
+          <RtlMirror x={(repo.language ? 120 : 0) + 60} rtl={rtl}>
+            <g transform={`translate(${(repo.language ? 120 : 0) + 60}, -8)`}>
+              <ForkIcon color={colors.text} />
+            </g>
+          </RtlMirror>
+          <RtlMirror x={(repo.language ? 120 : 0) + 60 + 18} rtl={rtl}>
+            <text x={(repo.language ? 120 : 0) + 60 + 18} y={0} fill={colors.text} fontFamily={FONT} fontSize={11}>
+              {formatNumber(repo.forks, "short", locale)}
+            </text>
+          </RtlMirror>
         </g>
       </FadeIn>
     </Card>

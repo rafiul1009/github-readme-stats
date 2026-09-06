@@ -2,9 +2,20 @@
 
 import type { OptionDef } from "@/lib/options";
 import { WEEKDAY_ABBREVIATIONS } from "@/widgets/streak/schema";
+import { LOCALES } from "@/lib/i18n";
 import type { FormValue } from "./query";
 
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+/** Common `date_format` presets (task 5.4) — free text still works for anything else. */
+const DATE_FORMAT_PRESETS = [
+  { value: "M j[, Y]", label: "Jan 5[, 2024] — short, year if not current" },
+  { value: "M j, Y", label: "Jan 5, 2024 — always with year" },
+  { value: "d/m/Y", label: "05/01/2024 — day/month/year" },
+  { value: "m/d/Y", label: "01/05/2024 — month/day/year" },
+  { value: "F j, Y", label: "January 5, 2024 — full month" },
+  { value: "Y-m-d", label: "2024-01-05 — ISO-like" },
+];
 
 export interface OptionFieldProps {
   name: string;
@@ -16,6 +27,55 @@ export interface OptionFieldProps {
 /** Renders a form control for a single declared option, dispatching on its schema type (docs/TODOS.md task 1.8). */
 export function OptionField({ name, def, value, onChange }: OptionFieldProps) {
   const label = name.replace(/_/g, " ");
+
+  if (name === "locale") {
+    const stringValue = typeof value === "string" ? value : "en";
+    return (
+      <Field label={label} description={def.description}>
+        <select
+          className="border rounded px-2 py-1 text-sm w-full bg-transparent"
+          value={stringValue}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {LOCALES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.label} ({l.code}){l.rtl ? " · RTL" : ""}
+            </option>
+          ))}
+        </select>
+      </Field>
+    );
+  }
+
+  if (name === "date_format") {
+    const stringValue = typeof value === "string" ? value : (def.default as string) ?? "";
+    const matchesPreset = DATE_FORMAT_PRESETS.some((p) => p.value === stringValue);
+    return (
+      <Field label={label} description={def.description}>
+        <select
+          className="border rounded px-2 py-1 text-sm w-full bg-transparent mb-1"
+          value={matchesPreset ? stringValue : "custom"}
+          onChange={(e) => {
+            if (e.target.value !== "custom") onChange(e.target.value);
+          }}
+        >
+          {DATE_FORMAT_PRESETS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+          <option value="custom">Custom pattern…</option>
+        </select>
+        <input
+          type="text"
+          className="border rounded px-2 py-1 text-sm w-full bg-transparent"
+          placeholder="d/j/F/M/m/n/Y/y tokens, [...] shown only if year differs"
+          value={stringValue}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </Field>
+    );
+  }
 
   if (name === "exclude_days") {
     const selected = new Set(Array.isArray(value) ? value : []);

@@ -12,6 +12,8 @@ export interface CardProps {
   hideBorder?: boolean;
   /** Unique id prefix for this card's <defs> elements, to avoid collisions when multiple cards share a page. */
   idPrefix: string;
+  /** Mirrors the whole card horizontally for RTL locales (task 5.3) — pair with <RtlMirror> on individual text/icon nodes. */
+  rtl?: boolean;
   children: ReactNode;
 }
 
@@ -42,6 +44,7 @@ export function Card({
   borderWidth = 1,
   hideBorder = false,
   idPrefix,
+  rtl = false,
   children,
 }: CardProps) {
   const clipId = `${idPrefix}-outer-rect`;
@@ -56,7 +59,7 @@ export function Card({
       viewBox={`0 0 ${width} ${height}`}
       width={width}
       height={height}
-      direction="ltr"
+      direction={rtl ? "rtl" : "ltr"}
     >
       <defs>
         <clipPath id={clipId}>
@@ -85,7 +88,7 @@ export function Card({
           stroke={hideBorder ? "transparent" : border}
           strokeWidth={borderWidth}
         />
-        {children}
+        <g transform={rtl ? `translate(${width}, 0) scale(-1, 1)` : undefined}>{children}</g>
       </g>
     </svg>
   );

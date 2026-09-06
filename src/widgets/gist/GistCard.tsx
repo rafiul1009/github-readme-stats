@@ -1,8 +1,9 @@
-import { Card, FadeIn, FadeInKeyframes } from "@/components/card";
+import { Card, FadeIn, FadeInKeyframes, RtlMirror } from "@/components/card";
 import { resolveThemeSlots, type ThemeDefinition } from "@/lib/themes";
 import { normalizeOverrideColor, parseColorValue } from "@/lib/color";
 import { wrapText } from "@/lib/text";
 import { getLanguageColor } from "@/lib/languageColors";
+import { t, isRtlLocale } from "@/lib/i18n";
 import type { RawGistData } from "@/lib/githubRepo";
 import { RepoIcon } from "@/widgets/pin/icons";
 
@@ -19,6 +20,7 @@ export interface GistCardProps {
   showOwner: boolean;
   theme: ThemeDefinition;
   overrides?: GistCardOverrides;
+  locale?: string;
   disableAnimations?: boolean;
   hideBorder?: boolean;
   borderRadius?: number;
@@ -35,6 +37,7 @@ export function GistCard({
   showOwner,
   theme,
   overrides = {},
+  locale = "en",
   disableAnimations = false,
   hideBorder = false,
   borderRadius = 4.5,
@@ -48,6 +51,7 @@ export function GistCard({
     icon: normalizeOverrideColor(overrides.icon),
   });
   const background = overrides.background ? parseColorValue(overrides.background) : colors.background;
+  const rtl = isRtlLocale(locale);
 
   const primaryName = gist.description || gist.files[0]?.filename || "Untitled Gist";
   const title = showOwner ? `${gist.owner}/${primaryName}` : primaryName;
@@ -69,18 +73,21 @@ export function GistCard({
       borderWidth={borderWidth}
       hideBorder={hideBorder}
       idPrefix="gist"
+      rtl={rtl}
     >
       <FadeInKeyframes />
 
       <FadeIn delay={0} disabled={disableAnimations}>
-        <g transform="translate(20, 22)">
-          <RepoIcon color={colors.icon} />
-          {titleLines.map((line, i) => (
-            <text key={i} x={22} y={5 + i * 20} fill={colors.title} fontFamily={FONT} fontWeight={700} fontSize={15}>
-              {line}
-            </text>
-          ))}
-        </g>
+        <RtlMirror x={20} rtl={rtl}>
+          <g transform="translate(20, 22)">
+            <RepoIcon color={colors.icon} />
+            {titleLines.map((line, i) => (
+              <text key={i} x={22} y={5 + i * 20} fill={colors.title} fontFamily={FONT} fontWeight={700} fontSize={15}>
+                {line}
+              </text>
+            ))}
+          </g>
+        </RtlMirror>
       </FadeIn>
 
       {shownFiles.map((file, i) => {
@@ -88,10 +95,14 @@ export function GistCard({
         return (
           <FadeIn key={file.filename} delay={0.1 + i * 0.05} disabled={disableAnimations}>
             <g>
-              <circle cx={24} cy={y - 4} r={4} fill={getLanguageColor(file.language)} />
-              <text x={34} y={y} fill={colors.text} fontFamily={FONT} fontSize={12}>
-                {file.filename}
-              </text>
+              <RtlMirror x={24} rtl={rtl}>
+                <circle cx={24} cy={y - 4} r={4} fill={getLanguageColor(file.language)} />
+              </RtlMirror>
+              <RtlMirror x={34} rtl={rtl}>
+                <text x={34} y={y} fill={colors.text} fontFamily={FONT} fontSize={12}>
+                  {file.filename}
+                </text>
+              </RtlMirror>
             </g>
           </FadeIn>
         );
@@ -99,16 +110,18 @@ export function GistCard({
 
       {extraCount > 0 && (
         <FadeIn delay={0.3} disabled={disableAnimations}>
-          <text
-            x={20}
-            y={30 + titleLines.length * 20 + shownFiles.length * 20}
-            fill={colors.text}
-            fontFamily={FONT}
-            fontSize={11}
-            opacity={0.7}
-          >
-            +{extraCount} more file{extraCount === 1 ? "" : "s"}
-          </text>
+          <RtlMirror x={20} rtl={rtl}>
+            <text
+              x={20}
+              y={30 + titleLines.length * 20 + shownFiles.length * 20}
+              fill={colors.text}
+              fontFamily={FONT}
+              fontSize={11}
+              opacity={0.7}
+            >
+              {t(locale, extraCount === 1 ? "moreFile" : "moreFiles", { n: extraCount })}
+            </text>
+          </RtlMirror>
         </FadeIn>
       )}
     </Card>

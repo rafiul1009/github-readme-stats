@@ -99,8 +99,8 @@ export const COMMON_OPTIONS = {
   },
   format: {
     type: "enum",
-    description: "Output format.",
-    values: ["svg", "json"],
+    description: "Output format. 'png' rasterizes the SVG (Node runtime only) with animations disabled.",
+    values: ["svg", "json", "png"],
     default: "svg",
   },
 } as const satisfies OptionSchema;

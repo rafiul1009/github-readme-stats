@@ -1,402 +1,193 @@
-# GitHub README Streak Stats — Project Documentation
+# GitHub README Stats — Project Documentation
 
-A small Next.js service that reads a GitHub user's contribution calendar through the
-GitHub GraphQL API, computes their current contribution streak, and serves it as
-either JSON or an embeddable SVG card suitable for a README.
+> Rewritten for task 5.10 (docs/TODOS.md). The previous version of this file described
+> the pre-Phase-0 single-widget prototype (streak card only, no theme system, no option
+> schema, satori/@vercel/og as unused dependencies) and had been stale since Phase 0.
+> This version describes the system as of Phase 5. For the "why" behind any decision
+> below, see [PLAN.md](./PLAN.md); for the phase-by-phase build log, see
+> [TODOS.md](./TODOS.md).
 
 ---
 
-## 1. Overview
+## 1. What this is
+
+A Next.js service that renders customizable GitHub profile widgets (streak, stats,
+top-languages, repo/gist pins) as SVG, JSON, or PNG, plus two builder UIs:
+
+- **`/build`** — configure one widget, preview it live against sample data, copy the
+  embed (Markdown/HTML/`<picture>`/raw URL/JSON/PNG/a GitHub Action workflow).
+- **`/profile`** — compose several widgets plus identity, social badges, and a
+  tech-stack row into one exportable `README.md`.
 
 | Item | Value |
 | --- | --- |
-| Name | `github-readme-streak-stats` |
-| Version | `0.1.0` (private) |
-| Framework | Next.js 15.3.1 (App Router) |
-| Language | TypeScript 5.8 (strict mode) |
+| Framework | Next.js 15.3.1 (App Router), all routes on the Node runtime (no `edge`) |
+| Language | TypeScript 5.8, strict mode |
 | UI | React 19, Tailwind CSS v4 |
-| Data source | GitHub GraphQL API v4 via `@octokit/graphql` |
-| Output | JSON (`/api/streak`) and SVG (`/api/streak-svg`) |
-| Status | Early prototype — API routes work; the public web page is still the stock Next.js starter |
-
-### Purpose
-
-Embedding a streak badge in a GitHub profile README requires a URL that returns an
-image. This project provides that URL: it authenticates against GitHub with a personal
-access token, pulls the last year of contribution data for a given username, reduces
-it to a "current streak" number, and renders a 495×195 SVG card with a light or dark
-theme.
+| Data source | GitHub GraphQL API v4 (`@octokit/graphql`) + REST for gists |
+| Rendering | JSX → real SVG elements via `react-dom/server`'s `renderToStaticMarkup` (not Satori — see PLAN.md §7 D1) |
+| PNG rasterization | `@resvg/resvg-js` (native binary, Node-only, `serverExternalPackages` in next.config.ts) |
+| Widgets | streak, stats, top-langs, pin, gist |
+| Themes | 40 curated presets, 8 core slots + widget extension-slot fallback |
+| Locales | 26 registered; 12 with full label translations, all with correct number/date formatting |
 
 ---
 
-## 2. Tech Stack
-
-**Runtime / framework**
-- `next@15.3.1` — App Router, Route Handlers, `--turbopack` in dev
-- `react@19` / `react-dom@19`
-- TypeScript with `strict: true`, path alias `@/*` → `./src/*`
-
-**Data**
-- `@octokit/graphql@8` — GraphQL client for the GitHub API
-
-**Rendering**
-- Hand-written SVG string generation (see [svg.tsx](../src/components/svg.tsx))
-- `@vercel/og@0.6.8` and `satori@0.12.2` are declared dependencies but **not currently
-  imported anywhere**. They appear to be reserved for a future JSX→image renderer.
-
-**Styling / tooling**
-- Tailwind CSS v4 via `@tailwindcss/postcss`
-- ESLint 9 flat config extending `next/core-web-vitals` and `next/typescript`
-
----
-
-## 3. Directory Structure
+## 2. Directory structure
 
 ```
-github-readme-streak-stats/
-├── docs/
-│   └── PROJECT-DOCUMENTATION.md   ← this file
-├── public/                         # static SVG assets from the Next.js starter
-│   ├── file.svg  globe.svg  next.svg  vercel.svg  window.svg
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── streak/route.ts      # GET → JSON  { currentStreak }
-│   │   │   └── streak-svg/route.ts  # GET → image/svg+xml (edge runtime)
-│   │   ├── favicon.ico
-│   │   ├── globals.css              # Tailwind entry + CSS custom properties
-│   │   ├── layout.tsx               # Root layout, Geist fonts, metadata
-│   │   └── page.tsx                 # Landing page (unmodified starter template)
-│   ├── components/
-│   │   └── svg.tsx                  # generateStreakCard() + theme palettes
-│   ├── lib/
-│   │   └── github.ts                # fetchContributionData() — GraphQL query
-│   └── utils/
-│       └── streak.ts                # calculateStreak() + in-memory TTL cache
-├── .env.local                       # GITHUB_TOKEN (placeholder, currently tracked)
-├── eslint.config.mjs
-├── next.config.ts                   # currently empty config
-├── postcss.config.mjs
-├── tsconfig.json
-└── package.json
+src/
+  app/
+    api/
+      widget/[type]/route.ts        # unified dispatcher for every widget
+      widget/[type]/preview/route.ts# same widget, bundled mock data, no auth/cache
+      streak/route.ts                # back-compat alias -> widget/streak?format=json
+      streak-svg/route.ts            # back-compat alias -> widget/streak
+    build/                           # single-widget builder (Pillar A)
+    profile/                         # full-README builder (Pillar B)
+    page.tsx                         # landing page
+  widgets/<name>/
+    index.ts        # registerWidget() call: fetch/compute/render/toJson/mock
+    schema.ts        # declarative option schema (client-safe, no server imports)
+    <Name>Card.tsx   # JSX -> SVG renderer
+    mock.ts          # sample data for the preview route
+  lib/
+    options/         # schema types, parser/validator, common option set
+    themes/          # slot model + preset registry
+    i18n/            # locale registry, label catalog, date-pattern engine
+    render/          # svg.ts (serialize + error card), png.ts (rasterize)
+    color.ts          # hex/alpha/named/gradient parsing
+    cache.ts          # two-tier TtlCache (data + rendered output/PNG)
+    github.ts, githubStats.ts, githubRepo.ts  # GraphQL/REST data fetching
+    rank.ts, languages.ts, arc.ts, format.ts, text.ts, escape.ts
+  components/card/    # shared JSX primitives: Card, Divider, FadeIn, Ring, RtlMirror, ErrorCard
+  utils/streak.ts     # streak-calculation logic (daily/weekly, exclude_days, timezone)
 ```
 
 ---
 
-## 4. Architecture
+## 3. The option schema (the keystone)
 
-### Request flow
+Every widget declares its options once as data (`src/lib/options/schema.ts`'s
+`OptionDef`/`OptionSchema`), merging `COMMON_OPTIONS` (theme, colors, border,
+`card_width`/`height`, `disable_animations`, `locale`, `number_format`,
+`cache_seconds`, `format`) with its own. That single declaration drives:
 
-```
-Client (README <img> tag or fetch)
-        │
-        ▼
-┌───────────────────────────────┐
-│ Route handler                 │
-│  /api/streak      (Node)      │
-│  /api/streak-svg  (Edge)      │
-└───────────────┬───────────────┘
-                │ 1. read ?username, ?theme, ?font
-                │ 2. validate username + GITHUB_TOKEN
-                ▼
-        getCachedStreak(username) ─── hit ──┐
-                │ miss                       │
-                ▼                            │
-┌───────────────────────────────┐            │
-│ lib/github.ts                 │            │
-│ fetchContributionData()       │            │
-│  → GitHub GraphQL v4          │            │
-│    contributionsCollection    │            │
-└───────────────┬───────────────┘            │
-                ▼                            │
-     weeks[].contributionDays[] flattened    │
-                ▼                            │
-┌───────────────────────────────┐            │
-│ utils/streak.ts               │            │
-│ calculateStreak()             │            │
-│ setCachedStreak()             │            │
-└───────────────┬───────────────┘            │
-                ▼                            ▼
-        ┌───────────────────────────────────────┐
-        │ /api/streak      → NextResponse.json  │
-        │ /api/streak-svg  → generateStreakCard │
-        │                    → image/svg+xml    │
-        └───────────────────────────────────────┘
-```
+- **API parsing/validation** — `parseOptions()` coerces and clamps against the schema,
+  throwing `OptionValidationError` on bad input.
+- **The builder's form** — `OptionField.tsx` dispatches a control per `type`
+  (string/number/boolean/enum/color/commaList), with a few named special cases
+  (`locale` → a language `<select>`, `date_format` → presets + free text,
+  `exclude_days` → a weekday toggle row).
+- **Cache-key normalization** — `normalizeOptionsForCacheKey()` sorts and stringifies
+  the full option set so equivalent requests share a render-cache entry.
 
-### Layer responsibilities
-
-| Layer | File | Responsibility |
-| --- | --- | --- |
-| Transport | [streak/route.ts](../src/app/api/streak/route.ts), [streak-svg/route.ts](../src/app/api/streak-svg/route.ts) | Parse query params, validate, choose cache vs. fetch, shape the response |
-| Data access | [github.ts](../src/lib/github.ts) | One GraphQL query; wraps errors with context |
-| Domain logic | [streak.ts](../src/utils/streak.ts) | Streak computation + module-level cache |
-| Presentation | [svg.tsx](../src/components/svg.tsx) | Theme palette and SVG string template |
-
-The separation is clean: the two route handlers share the same data-access and domain
-layers and differ only in how they serialize the result.
+Widgets are registered against a type-erased `WidgetDefinition` (`src/widgets/registry.ts`):
+`fetchRawData` (cached per username, ~30 min), `computeData` (pure, uncached — put any
+option that only affects *derivation*, not *what's fetched*, here), `renderSvg`,
+`toJson`, and optionally `mockRawData` for the preview route.
 
 ---
 
-## 5. Module Reference
+## 4. Theme system
 
-### `src/lib/github.ts`
+8 core slots (`background`, `border`, `title`, `text`, `icon`, `accent`, `stroke`,
+`muted`) that every theme must define, plus optional widget-specific extension slots
+(`ring`, `fire`, `currStreakNum`, ...) that fall back to a mapped core slot when a
+theme doesn't override them (`src/lib/themes/slots.ts`'s `EXTENSION_FALLBACKS`).
+Resolution order for any slot: explicit query override → theme's extension slot →
+theme's core slot → widget default. This is what lets 40 themes work across 5+ widget
+types without 40×5 hand-authored palettes — see PLAN.md §7 D4/D5.
 
-```ts
-fetchContributionData(username: string): Promise<ContributionCalendar>
-```
-
-Creates an authenticated client with `graphql.defaults()`, injecting
-`Authorization: Bearer ${process.env.GITHUB_TOKEN}`. It runs:
-
-```graphql
-query($username: String!) {
-  user(login: $username) {
-    contributionsCollection {
-      contributionCalendar {
-        totalContributions
-        weeks { contributionDays { contributionCount date } }
-      }
-    }
-  }
-}
-```
-
-`contributionsCollection` with no date arguments returns the **trailing 12 months**,
-so streaks longer than one year cannot be represented by this query as written.
-
-Errors are rethrown as `Failed to fetch contribution data: <message>`.
-
-### `src/utils/streak.ts`
-
-```ts
-calculateStreak(days: { contributionCount: number; date: string }[]): StreakInfo
-getCachedStreak(key: string): StreakInfo | null
-setCachedStreak(key: string, data: StreakInfo): void
-```
-
-`calculateStreak` copies the input, sorts descending by date, normalizes both `today`
-and each contribution date to midnight local time, and walks backwards. It stops at
-the first day with `contributionCount === 0` or the first gap larger than the streak
-accumulated so far, returning `{ currentStreak, lastContributionDate }`.
-
-The cache is a module-level `Map` keyed by username with a 1-hour TTL
-(`CACHE_TTL = 3600000`). Entries are never actively evicted — a stale entry simply
-fails the freshness check and is overwritten on the next miss.
-
-### `src/components/svg.tsx`
-
-```ts
-generateStreakCard(props: StreakCardProps): string
-```
-
-Holds a `themes` record with `light` and `dark` palettes (`background`, `text`,
-`border`, `streak`) and returns a template-literal SVG: a rounded background rect, a
-1px border rect, and three centered `<text>` nodes — the header
-(`<username>'s Contribution Streak`), the streak count, and the formatted last
-contribution date (`en-US`, e.g. `May 2, 2025`).
-
-| Theme | background | text | border | streak |
-| --- | --- | --- | --- | --- |
-| light | `#ffffff` | `#333333` | `#e4e2e2` | `#4c71f2` |
-| dark | `#0d1117` | `#c9d1d9` | `#30363d` | `#58a6ff` |
-
-A commented-out `CSSProperties` style object remains in the file from an earlier
-Satori-based approach.
-
-### `src/app/api/streak/route.ts`
-
-Node runtime. Returns `{ currentStreak: number }`.
-
-### `src/app/api/streak-svg/route.ts`
-
-Declares `export const runtime = 'edge'`. Returns the SVG with
-`Content-Type: image/svg+xml` and `Cache-Control: public, max-age=3600`.
+Colors (`src/lib/color.ts`) accept a 6-digit hex, an 8-digit hex with alpha, a CSS
+color name, or `angle,c1,c2,...,cN` for a background gradient.
 
 ---
 
-## 6. API Reference
+## 5. Rendering pipeline
 
-### `GET /api/streak`
+Widgets are authored as TSX components (`<Card>`, `<Divider>`, `<FadeIn>`, `<Ring>`,
+`<RtlMirror>` from `src/components/card/`) that emit real SVG elements — `<circle>`,
+`<path>`, arc geometry (`src/lib/arc.ts`), `<mask>`, gradient `<defs>`, `<style>`
+keyframes. `renderJsxToSvg()` (`src/lib/render/svg.ts`) serializes the element tree
+with `renderToStaticMarkup` from `react-dom/server.edge` (that specific entry point,
+not the bare `react-dom/server`, sidesteps a Next.js app-router bundler check — it
+still runs on the Node runtime).
 
-**Query parameters**
+**Formats**: `format=svg` (default) serializes as above. `format=json` short-circuits
+rendering entirely and returns `widget.toJson(data, options)`. `format=png` renders
+the SVG as normal, then rasterizes it with `@resvg/resvg-js`
+(`src/lib/render/png.ts`) — Node-only, and `disable_animations` is forced on first
+(resvg renders one static frame, so an in-progress fade-in would otherwise freeze
+mid-animation instead of showing the finished card).
 
-| Name | Required | Description |
-| --- | --- | --- |
-| `username` | yes | GitHub login to look up |
-
-**Responses**
-
-| Status | Body |
-| --- | --- |
-| 200 | `{ "currentStreak": 12 }` |
-| 400 | `{ "error": "Username parameter is required" }` |
-| 500 | `{ "error": "GitHub token is not configured" }` |
-| 500 | `{ "error": "Failed to fetch streak data" }` |
-
-```bash
-curl "http://localhost:3000/api/streak?username=rafiul1009"
-```
-
-### `GET /api/streak-svg`
-
-**Query parameters**
-
-| Name | Required | Default | Description |
-| --- | --- | --- | --- |
-| `username` | yes | — | GitHub login to look up |
-| `theme` | no | `light` | `light` or `dark` |
-| `font` | no | `Inter` | Font family name injected into the SVG `<style>` block |
-
-**Responses**
-
-| Status | Body |
-| --- | --- |
-| 200 | SVG document, `image/svg+xml`, cached one hour |
-| 400 | `Username parameter is required` (plain text) |
-| 500 | `GitHub token is not configured` / `Failed to generate streak SVG` (plain text) |
-
-**README embed**
-
-```markdown
-![GitHub Streak](https://your-deployment.vercel.app/api/streak-svg?username=rafiul1009&theme=dark)
-```
+**Caching**: two `TtlCache` instances (`src/lib/cache.ts`) — `githubDataCache` (raw
+GraphQL/REST responses, ~30 min, keyed by widget type + username/repo/gist-id, plus a
+suffix for options that genuinely change the upstream query) and
+`renderedOutputCache`/`renderedPngCache` (final SVG/PNG, keyed by the full normalized
+option set, TTL from `cache_seconds` or the widget's default). Both are module-level
+`Map`s — they do not survive serverless cold starts or spread across concurrent
+instances; Phase 10.1 (durable cache) is the documented upgrade path.
 
 ---
 
-## 7. Configuration
+## 6. Internationalization (`src/lib/i18n/`)
 
-### Environment variables
-
-| Variable | Required | Description |
-| --- | --- | --- |
-| `GITHUB_TOKEN` | yes | GitHub personal access token used as a Bearer credential for the GraphQL API |
-
-`.env.local` currently holds a placeholder:
-
-```
-GITHUB_TOKEN=your_github_token_here
-```
-
-The token needs read access to profile/contribution data — a classic PAT with
-`read:user` (add `repo` only if private contributions should be counted), or a
-fine-grained token with read-only user permissions.
-
-### Other config files
-
-- `next.config.ts` — empty `NextConfig`; no rewrites, headers, or image config yet.
-- `tsconfig.json` — `strict`, `target: ES2017`, `moduleResolution: bundler`,
-  `@/*` path alias.
-- `postcss.config.mjs` — the single `@tailwindcss/postcss` plugin (Tailwind v4 style).
-- `eslint.config.mjs` — flat config bridging the legacy Next shareable configs via
-  `FlatCompat`.
+- **`locales.ts`** — a registry of `{code, label, rtl}`; `getLocale()` falls back to
+  English for any unrecognized code. 26 locales registered, 4 marked `rtl: true`
+  (`ar`, `he`, `fa`, `ur`).
+- **`catalog.ts`** — an always-complete English label catalog plus partial per-locale
+  overrides (12 fully translated: `es fr de pt-BR it ru ja ko zh-CN ar hi tr`); a
+  missing key or locale silently falls back to English rather than rendering blank.
+- **`dateFormat.ts`** — a PHP `date()`-style token engine (`d j F M m n Y y`) with a
+  `[...]` bracket meaning "include only if the date's year differs from the reference
+  year" — mirrors streak-stats' own `date_format` convention (PLAN.md §7 D9). Exposed
+  as the streak widget's `date_format` option, default `M j[, Y]`.
+- **RTL layout mirroring** (`components/card/RtlMirror.tsx`) — `<Card rtl>` wraps a
+  widget's content in `translate(width,0) scale(-1,1)`, mirroring every position
+  card-wide. Individually wrapping a text node or icon group in `<RtlMirror x={itsOwnX}>`
+  composes a second reflection around that same coordinate, which cancels the visual
+  flip (glyphs/icons render normally) while leaving the position change intact —
+  composing two reflections is a pure translation, and that cancellation holds
+  regardless of how many pure-translation groups sit in between, so it's safe to wrap
+  directly around any positioned element using its own local x/cx. Applied to all 5
+  widgets; decorative bars/wedges (progress bars, pie/donut slices) are deliberately
+  left unwrapped since letting them mirror naturally produces the correct RTL
+  fill-direction/reading order for a row of items.
 
 ---
 
-## 8. Local Development
+## 7. Delivery modes
 
-```bash
-# 1. install
-npm install
-
-# 2. configure — replace the placeholder token in .env.local
-#    GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
-
-# 3. run (Turbopack)
-npm run dev          # http://localhost:3000
-
-# 4. verify
-curl "http://localhost:3000/api/streak?username=<login>"
-curl "http://localhost:3000/api/streak-svg?username=<login>&theme=dark" -o card.svg
-```
-
-**Scripts**
-
-| Script | Command | Purpose |
-| --- | --- | --- |
-| `dev` | `next dev --turbopack` | Development server |
-| `build` | `next build` | Production build |
-| `start` | `next start` | Serve the production build |
-| `lint` | `next lint` | ESLint over the project |
+1. **Hosted endpoint** — the default; embed `/api/widget/<type>?...` directly.
+2. **GitHub Action** — `src/app/build/workflowYaml.ts` generates a workflow (exposed as
+   a copy-out tab in `/build`) that curls the widget's SVG on a schedule and commits it
+   into the user's own repo, so their README has zero runtime dependency on this
+   service's uptime. A filled-in reference copy lives at
+   [`examples/github-actions/update-widget.yml`](../examples/github-actions/update-widget.yml).
+3. **Self-host** — `Dockerfile` builds Next's `output: "standalone"` artifact (only the
+   pruned production dependency tree, not full `node_modules`). `WHITELIST` (comma-
+   separated usernames) restricts which accounts a self-hosted instance serves —
+   enforced in `src/widgets/handler.ts`'s `isWhitelisted()`, checked against `username`
+   for most widgets or the owner segment of `repo` for the pin widget; not enforced for
+   gists (no owner available without an extra fetch).
 
 ---
 
-## 9. Deployment
+## 8. Known limitations
 
-The project is a stock Next.js app and deploys to Vercel with no extra configuration.
-The only step beyond connecting the repository is setting `GITHUB_TOKEN` as an
-environment variable in the project settings (Production, Preview, and Development as
-needed).
-
-Any host that runs Next.js 15 works equally well, with one caveat: `/api/streak-svg`
-declares the edge runtime, so the platform must support edge route handlers or that
-declaration should be removed.
-
----
-
-## 10. Known Issues and Limitations
-
-Observations from reading the current code, roughly by impact.
-
-1. **The streak calculation is incorrect.** In `calculateStreak`, the line
-   `currentStreak = dayDifference === 0 ? 1 : dayDifference` derives the streak from
-   the *distance between today and the contribution date* rather than incrementing a
-   counter. A user whose last contribution was 5 days ago gets a streak taken from that
-   gap, not from the number of consecutive contributed days. This should be a
-   `currentStreak++` walk against an explicit expected-date cursor.
-
-2. **The in-memory cache does not survive serverless invocations.** `cache` is a
-   module-level `Map`. On Vercel each cold start gets a fresh module instance, and the
-   edge and Node routes have entirely separate memory, so the two endpoints never share
-   cached data. A durable store (Vercel KV, Redis) or reliance on HTTP caching would be
-   needed for a real cache.
-
-3. **`runtime = 'edge'` on the SVG route is risky.** It shares `@octokit/graphql` and
-   the `process.env` access path with the Node route; edge runtime restrictions can
-   surface at deploy time rather than locally.
-
-4. **No output escaping in the SVG.** `username` and `font` are interpolated straight
-   into the SVG markup and its `<style>` block in [svg.tsx](../src/components/svg.tsx).
-   A value containing `<`, `&`, or `"` produces malformed SVG — an injection surface
-   worth closing before the endpoint is public.
-
-5. **Only 12 months of history.** The GraphQL query takes no `from`/`to` arguments, so
-   streaks that started more than a year ago are truncated.
-
-6. **`lastContributionDate` may be empty.** When the streak is zero it is `''`, and
-   `new Date('').toLocaleDateString()` renders `Invalid Date` on the card.
-
-7. **Timezone handling is local-machine dependent.** Dates are normalized with
-   `setHours(0,0,0,0)` in server-local time while GitHub returns UTC-based dates, so
-   the boundary day can be off by one depending on where the server runs.
-
-8. **`.env.local` is tracked despite `.gitignore` containing `.env*`.** It holds only a
-   placeholder today, but it should be untracked and replaced with a committed
-   `.env.example` before a real token is ever placed in it.
-
-9. **The landing page is the unmodified Next.js starter.** `page.tsx` and the root
-   layout metadata (`title: "Create Next App"`) still ship template content.
-
-10. **`@vercel/og` and `satori` are unused dependencies**, adding install weight without
-    contributing to the build.
-
-11. **No tests.** No test runner is configured; `calculateStreak` in particular is pure
-    and cheap to unit-test.
-
----
-
-## 11. Suggested Roadmap
-
-- Rewrite `calculateStreak` with a correct consecutive-day walk and cover it with unit
-  tests (contributed today, contributed yesterday only, gap in the middle, no
-  contributions at all).
-- Add `longestStreak`, `totalContributions`, and streak start/end dates to both
-  responses — the GraphQL query already returns `totalContributions`.
-- Escape user-controlled values before interpolating them into the SVG.
-- Replace the in-memory `Map` with a shared cache, or lean on `Cache-Control` plus a
-  CDN and drop the map entirely.
-- Paginate the contributions query across multiple years for long streaks.
-- Build the real landing page: a username input that previews the card and emits a
-  copyable Markdown embed snippet; update the layout metadata.
-- Either use `satori`/`@vercel/og` to render a richer card, or remove them.
-- Add `.env.example` and untrack `.env.local`.
+- **Module-level caches don't survive cold starts** or spread across concurrent
+  serverless instances (Phase 10.1 tracks a Vercel KV/Redis upgrade).
+- **First-100-repositories ceiling** on stats/language aggregation — a GitHub GraphQL
+  API constraint (`repositories(first: 100)`), not a bug.
+- **Contribution data can lag up to 24 hours** behind real activity on GitHub's side.
+- **RTL mirroring is geometric, not exhaustively hand-verified per widget** — the
+  mechanism is proven correct (see §6), but only spot-checked visually against a few
+  locale/widget combinations, not systematically screenshot-tested.
+- **PNG rasterization is untested inside a Linux container** in this repo's own CI —
+  verified locally on the development machine's platform binary only; `npm ci` on a
+  target platform pulls the matching `@resvg/resvg-js-*` optional dependency
+  automatically, but that path hasn't been exercised end-to-end here.
+- **No automated test suite** — every phase to date has been verified by hand against
+  live GitHub data and structural SVG inspection instead (see each phase's notes in
+  [TODOS.md](./TODOS.md)); a real test suite is still open work.

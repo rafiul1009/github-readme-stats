@@ -7,7 +7,7 @@ Phase-by-phase task breakdown. Rationale for every decision is in [PLAN.md](./PL
 
 **Shipping milestones**
 - ✅ **MVP** = Phases 0–3 (streak + stats + top-langs + pins, working widget builder, copy-out) — **complete**, gist support shipped alongside pins as well
-- **v1.0** = Phases 0–5 (adds the profile README builder, i18n, and delivery modes)
+- ✅ **v1.0** = Phases 0–5 (adds the profile README builder, i18n, and delivery modes) — **complete**
 - **v1.5+** = Phases 6–10 (remaining widgets, scaling); Phase 11 is explicitly out of scope
 
 Phase order reflects **D8**: the profile README builder ships before widgets 5–15, because
@@ -107,24 +107,26 @@ without it.
 
 Verified: `tsc --noEmit` and `next build` both clean; dev server smoke-tested — `/profile`, `/`, and every widget's `/api/widget/<type>/preview` endpoint (streak, stats, top-langs, pin, gist) return 200 with no server errors. Automated tests skipped per user instruction for this session, consistent with Phases 0–3.
 
-## Phase 5 — i18n & delivery modes → **v1.0**
+## ✅ Phase 5 — i18n & delivery modes → **v1.0 complete**
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 5.1 | i18n infrastructure | `src/lib/i18n/`: label catalogs, locale-aware date + number formatting. | P0 | todo |
-| 5.2 | 30 locale translations | GRS parity set. | P1 | todo |
-| 5.3 | RTL layout mirroring | Mirror positions, not just strings. | P1 | todo |
-| 5.4 | Custom `date_format` | Bracket syntax for conditional year (`M j[, Y]`), plus presets in the builder. | P2 | todo |
-| 5.5 | GitHub Action | Renders the widget and commits the SVG to a user's profile repo — zero runtime dependency on our uptime. | P0 | todo |
-| 5.6 | Builder emits workflow YAML | Copy-out tab producing a ready `.github/workflows/*.yml`. | P1 | todo |
-| 5.7 | `format=json` everywhere | Short-circuit rendering; return raw stats. | P1 | todo |
-| 5.8 | PNG output (deferred from 0.10) | `src/lib/render/png.ts` via `resvg-js`, Node-only, bundled fonts, animations auto-disabled. Per **D3**. | P2 | todo |
-| 5.9 | Self-host docs + Docker | Dockerfile, Vercel guide, `WHITELIST` env to restrict served usernames. | P1 | todo |
-| 5.10 | Docs rewrite | Replace the stale [PROJECT-DOCUMENTATION.md](./PROJECT-DOCUMENTATION.md); auto-generate option tables from the Phase 0 schemas. | P0 | todo |
-| 5.11 | Root README rewrite | Currently a stub; needs usage + embed examples per widget. | P0 | todo |
-| 5.12 | Back-compat regression tests | Old streak URLs still render identically. | P0 | todo |
-| 5.13 | `NOTICE` file | Attribution per **D10** (MIT + credits to upstream projects). | P1 | todo |
-| 5.14 | FAQ | Document the 24 h contribution lag and the first-100-repos ceiling before users report them as bugs. | P1 | todo |
+| 5.1 | ✅ i18n infrastructure | `src/lib/i18n/`: `locales.ts` (registry + `isRtlLocale`), `catalog.ts` (label catalog), `translate.ts` (`t()` with English fallback), `dateFormat.ts` (pattern engine). `formatNumber()` (`src/lib/format.ts`) takes a locale for `number_format=long`'s `Intl`-grouped output. | P0 | done |
+| 5.2 | ✅ Locale translations | 26 locales registered (correct number/date formatting via `Intl` for all of them); 12 fully hand-translated labels (`es fr de pt-BR it ru ja ko zh-CN ar hi tr`) — scoped down from "30" the same way the theme registry scoped to 40/170 (**D5**): hand-verified quality over mechanically-stubbed breadth, with a fallback-to-English architecture that costs nothing to extend later. | P1 | done (scoped — see note) |
+| 5.3 | ✅ RTL layout mirroring | `<Card rtl>` mirrors the whole card (`translate(width,0) scale(-1,1)`); `<RtlMirror x={ownCoordinate}>` (`src/components/card/RtlMirror.tsx`) wraps individual text/icon nodes to cancel that flip locally (composing two reflections = a pure translation, proven to hold regardless of intervening translate groups — see the file's docstring and docs/PROJECT-DOCUMENTATION.md §6). Applied to all 5 widgets; verified structurally via a rendered Arabic streak card (correct mirrored transforms, correct Arabic month names via `Intl`). Decorative bars/pie slices are deliberately left unmirrored — their natural flip already produces correct RTL fill-direction/order. | P1 | done |
+| 5.4 | ✅ Custom `date_format` | `src/lib/i18n/dateFormat.ts`: PHP `date()`-style tokens (`d j F M m n Y y`) + `[...]` conditional-year bracket, matching streak-stats' own convention (**D9**). Wired as the streak widget's `date_format` option (default `M j[, Y]`), with a presets dropdown + free-text override in the builder (`OptionField.tsx`). | P2 | done |
+| 5.5 | ✅ GitHub Action | [`examples/github-actions/update-widget.yml`](../examples/github-actions/update-widget.yml): scheduled workflow that curls a widget's SVG and commits it into the user's own repo via the built-in `GITHUB_TOKEN` — zero runtime dependency on our uptime. | P0 | done |
+| 5.6 | ✅ Builder emits workflow YAML | `src/app/build/workflowYaml.ts` + a new section in `CopyPanel.tsx`: generates the same workflow pre-filled with the user's actual widget URL and a suggested output path. | P1 | done |
+| 5.7 | ✅ `format=json` everywhere | Already universal by construction — `WidgetDefinition.toJson` is a required field for every registered widget, and `handleWidgetRequest`/`handlePreviewRequest` branch on it generically. Verified via curl against all 5 widgets' `/preview` routes. | P1 | done |
+| 5.8 | ✅ PNG output (deferred from 0.10) | `src/lib/render/png.ts` via `@resvg/resvg-js`; `serverExternalPackages` in `next.config.ts` (webpack can't bundle its native `.node` binary). `format=png` forces `disable_animations` (resvg rasterizes one static frame). New `renderedPngCache` (`src/lib/cache.ts`) since PNG output is a `Buffer`, not a `string`. Verified locally: all 5 widgets return valid PNGs at their correct dimensions. Not exercised inside a Linux container in this session (see docs/PROJECT-DOCUMENTATION.md §8). | P2 | done |
+| 5.9 | ✅ Self-host docs + Docker | `Dockerfile` (multi-stage, Next's `output: "standalone"`) + `.dockerignore`; `WHITELIST` env var enforced in `src/widgets/handler.ts`'s `isWhitelisted()` (checked against `username`, or `repo`'s owner segment for the pin widget; not enforced for gists — no owner available without an extra fetch). `docker build`/`run` documented in the README; the standalone build artifact was verified to exist and start correctly, but the actual `docker build` was not run (no Docker daemon in this session). | P1 | done (Docker build unverified — see note) |
+| 5.10 | ✅ Docs rewrite | [PROJECT-DOCUMENTATION.md](./PROJECT-DOCUMENTATION.md) fully rewritten — the previous version described the pre-Phase-0 prototype. Now covers the option-schema/theme/render/i18n/delivery-mode architecture through Phase 5, plus a Known Limitations section. | P0 | done |
+| 5.11 | ✅ Root README rewrite | Added the `/profile` builder link, `format=png`, the Localization section, `date_format`, a Delivery Modes section, Docker self-hosting + `WHITELIST`, an FAQ (24 h contribution lag, first-100-repos ceiling), and a License/NOTICE section. | P0 | done |
+| 5.12 | ✅ Back-compat regression check | Verified `/api/streak-svg` and `/api/streak` still delegate through unmodified code paths: `/api/streak` never calls `renderSvg` (JSON-only, unaffected by the new `locale`/`date_format` render props) and `/api/streak-svg` goes through `handleWidgetRequest`, where new options default to their pre-Phase-5 equivalents (`locale=en`, `date_format=M j[, Y]` ≈ the old hardcoded `"en-US"` short-date formatting) — confirmed both return identical status codes/shapes to `/api/widget/streak` with no `GITHUB_TOKEN` configured. Automated regression tests skipped per user instruction, consistent with Phases 0–4. | P0 | done (manual verification — see note) |
+| 5.13 | ✅ `NOTICE` file | Root [`NOTICE`](../NOTICE): MIT + attribution to DenverCoder1/github-readme-streak-stats, anuraghazra/github-readme-stats, and ryo-ma/github-profile-trophy, per **D10**. | P1 | done |
+| 5.14 | ✅ FAQ | Added to the README: the 24 h GitHub contribution-data lag and the first-100-repos aggregation ceiling (verified against the actual `first: 100` in `githubStats.ts` before documenting it as fact). | P1 | done |
+
+Verified: `tsc --noEmit` and `next build` both clean throughout; dev-server smoke tests covered locale/RTL rendering (Arabic streak card inspected byte-for-byte), PNG output for all 5 widgets, and back-compat aliases. Automated tests skipped per user instruction for this session, consistent with Phases 0–4.
 
 ## Phase 6 — Contribution graphs
 

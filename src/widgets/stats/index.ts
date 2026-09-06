@@ -45,6 +45,7 @@ function renderStatsSvg(data: RawUserStats, options: StatsOptions): string {
         ring: options.ring_color,
       },
       numberFormat: options.number_format,
+      locale: options.locale,
       disableAnimations: options.disable_animations,
       hideBorder: options.hide_border,
       hideTitle: options.hide_title,

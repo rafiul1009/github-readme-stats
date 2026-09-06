@@ -28,6 +28,12 @@ export const STREAK_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
     type: "string",
     description: "IANA timezone used to determine the current day (e.g. Asia/Kolkata). Defaults to UTC.",
   },
+  date_format: {
+    type: "string",
+    description:
+      "PHP date()-style pattern for the card's date ranges (d/j/F/M/m/n/Y/y tokens). Text in [...] is shown only when the year differs from the current year.",
+    default: "M j[, Y]",
+  },
   starting_year: {
     type: "number",
     description: "Only consider contributions from this year onward.",

@@ -186,6 +186,7 @@ export function BuilderClient() {
                 altText={`${identifyingValue} — ${entry.label}`}
                 themeName={themeName}
                 themeMode={theme.mode}
+                widgetType={entry.type}
                 buildUrlWithTheme={(t) =>
                   `${origin}/api/widget/${entry.type}?${buildQueryString(entry.schema, { ...form, theme: t })}`
                 }
