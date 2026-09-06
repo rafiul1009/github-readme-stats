@@ -88,7 +88,7 @@ without it.
 | 3.7 | Tests | **Skipped per user instruction for this session.** Verified instead against live data/API: malformed `repo=`, missing `repo=`, nonexistent repo (404), nonexistent gist (404), invalid gist id (400), long-description word wrapping with both auto and explicit `description_lines_count`. Not exercised: an actual private repo (structurally identical to the not-found path, since GitHub's API returns the same `NOT_FOUND` type for both, but not directly observed). | P1 | skipped |
 | 3.8 | ✅ **MVP release prep** | Root `README.md` rewritten with all 5 widgets, embed examples, common + per-widget options, local dev, deploy. Landing page now links into the builder pre-selected for each widget type. `.env.example` already accurate; confirmed (again) `.env.local` is not git-tracked. | P0 | done |
 
-## Phase 4 — Profile README builder (Pillar B)
+## ✅ Phase 4 — Profile README builder (Pillar B) → **v1.0 core complete**
 
 > **Moved ahead of widgets 5–15 per D8.** This is the differentiator, and it is worth more
 > on top of four solid widgets than a fifth widget is worth with no builder. Building it
@@ -96,14 +96,16 @@ without it.
 
 | # | Task | Details | Pri | Status |
 | --- | --- | --- | --- | --- |
-| 4.1 | Multi-widget composition | Pick several widgets, configure each, arrange them. | P0 | todo |
-| 4.2 | Drag-to-reorder + layout | Side-by-side vs stacked; alignment; consistent widths across stacked cards. | P0 | todo |
-| 4.3 | Shared theme lock | One theme applied across all selected widgets so a README looks coherent. | P0 | todo |
-| 4.4 | Identity & socials section | Name, bio, social links → shields.io badge row (own badge engine arrives in Phase 8). | P1 | todo |
-| 4.5 | Tech-stack picker | Searchable picker; emits shields.io badges now, swaps to the Phase 8 icon grid later. | P1 | todo |
-| 4.6 | Full README export | Emit a complete `README.md` with live rendered preview beside it. | P0 | todo |
-| 4.7 | Starter templates | Minimal, Developer, Data Scientist, OSS Maintainer, Student. | P1 | todo |
-| 4.8 | Save/share config | Encode the whole profile config in a shareable URL. | P2 | todo |
+| 4.1 | ✅ Multi-widget composition | `/profile` (`src/app/profile/`): `ProfileConfig.widgets` is an array of `WidgetInstance` (type + identifying value + options), each rendered via a reused `WidgetInstanceEditor` (identifying-value input + collapsible options grid built from the widget's own schema, same `OptionField` the single-widget builder uses). Add/remove via a type `<select>`. | P0 | done |
+| 4.2 | ✅ Drag-to-reorder + layout | `WidgetInstanceEditor` is `draggable`; native HTML5 drag events reorder `config.widgets` (`reorderWidgets`), with ↑/↓ buttons as a non-drag fallback. `layout: "stacked" \| "side-by-side"` and `align: "left" \| "center"` control both the live preview and the exported markdown's `<p align>` wrapping. | P0 | done |
+| 4.3 | ✅ Shared theme lock | One `ThemePicker` sets `config.theme`; `widgetImageUrl`/`widgetPreviewUrl` (`src/app/profile/widgetUrl.ts`) force this theme onto every widget instance's URL, ignoring any per-widget theme value. | P0 | done |
+| 4.4 | ✅ Identity & socials section | Name/bio fields; `SOCIAL_PLATFORMS` catalog (`src/app/profile/social.ts`, 13 platforms) renders each configured link as a shields.io badge (`src/app/profile/badges.ts`) linking to the platform URL — swaps to the native badge engine in Phase 8. | P1 | done |
+| 4.5 | ✅ Tech-stack picker | `TECH_STACK` catalog (`src/app/profile/techstack.ts`, ~50 items across 7 categories) as a searchable-by-category toggle grid; emits shields.io badges now, swaps to the Phase 8 icon grid later. | P1 | done |
+| 4.6 | ✅ Full README export | `buildReadmeMarkdown` (`src/app/profile/exportReadme.ts`) assembles name/bio/socials/tech-stack/widgets into one `README.md` string (copy-to-clipboard textarea); `ReadmePreview.tsx` renders the live equivalent beside it using each widget's mock-data preview endpoint. | P0 | done |
+| 4.7 | ✅ Starter templates | `PROFILE_TEMPLATES` (`src/app/profile/templates.ts`): Minimal, Developer, Data Scientist, Open-Source Maintainer, Student — each seeds bio/socials/tech-stack/widgets/theme, layered on top of whatever username/name is already entered. | P1 | done |
+| 4.8 | ✅ Save/share config | The whole `ProfileConfig` is JSON-serialized into the page's own `?c=` query param via debounced `history.replaceState` (mirrors the single-widget builder's permalink approach), so the URL is the save/share mechanism — no backend storage needed. | P2 | done |
+
+Verified: `tsc --noEmit` and `next build` both clean; dev server smoke-tested — `/profile`, `/`, and every widget's `/api/widget/<type>/preview` endpoint (streak, stats, top-langs, pin, gist) return 200 with no server errors. Automated tests skipped per user instruction for this session, consistent with Phases 0–3.
 
 ## Phase 5 — i18n & delivery modes → **v1.0**
 

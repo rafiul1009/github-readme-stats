@@ -11,12 +11,20 @@ export default function Home() {
         </p>
       </div>
 
-      <Link
-        href="/build"
-        className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-medium hover:bg-blue-700"
-      >
-        Open the builder
-      </Link>
+      <div className="flex gap-3">
+        <Link
+          href="/build"
+          className="rounded-full bg-blue-600 text-white px-5 py-2 text-sm font-medium hover:bg-blue-700"
+        >
+          Open the widget builder
+        </Link>
+        <Link
+          href="/profile"
+          className="rounded-full border px-5 py-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/10"
+        >
+          Build a full README
+        </Link>
+      </div>
 
       <div className="flex flex-wrap justify-center gap-2 max-w-lg">
         {WIDGET_CATALOG.map((w) => (
