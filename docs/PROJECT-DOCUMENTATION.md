@@ -14,6 +14,11 @@
 A Next.js service that renders customizable GitHub profile widgets (streak, stats,
 top-languages, repo/gist pins) as SVG, JSON, or PNG, plus two builder UIs:
 
+> **UI note**: the two-builder, four-route layout described below is being replaced by a
+> single-page dashboard at `/` (PLAN.md §9, TODOS.md Phase 12). Sections 1, 2 and 7 are
+> rewritten as part of task 12.24 once that ships; everything else here — the option
+> schema, theme system, render pipeline, i18n — is unaffected by that phase.
+
 - **`/build`** — configure one widget, preview it live against sample data, copy the
   embed (Markdown/HTML/`<picture>`/raw URL/JSON/PNG/a GitHub Action workflow).
 - **`/profile`** — compose several widgets plus identity, social badges, and a

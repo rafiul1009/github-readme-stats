@@ -504,6 +504,25 @@ projects. **Decision**: ship MIT with a `NOTICE` crediting DenverCoder1
 (streak-stats), anuraghazra (github-readme-stats), ryo-ma (profile-trophy), and the other
 projects surveyed in §2.
 
+### D11 — The builder renders on an explicit button press, not on every edit.
+
+The shipped builder debounces 250 ms and re-fetches a preview for each keystroke.
+That is affordable only while the preview is mock-backed; it makes a live-data
+preview impossible without burning rate limit, and it makes the preview flicker
+while a username is being typed.
+
+**Decision**: option edits change local state only and mark the canvas stale. A
+**Generate** button (rendered both above and below the canvas, so one is always
+reachable) performs the single render. A **Sample / Live** toggle picks the endpoint:
+`/preview` (bundled mock data, free, default) or `/api/widget/<type>` (the user's real
+GitHub data).
+
+**If wrong**: an opt-in "auto-render" switch layers onto this cheaply. The reverse —
+retrofitting explicit render onto a live-render UI — is the expensive direction, which
+is why explicit is the default we build.
+
+Full UI consequences in §9.
+
 ---
 
 ## 8. Residual risks
@@ -524,3 +543,214 @@ Genuine unknowns that remain after the decisions above.
   this as a bug in the streak card. Surface it in the FAQ before launch.
 
 See [TODOS.md](./TODOS.md) for the phase-by-phase task breakdown.
+
+---
+
+## 9. UI rewrite — the single-page dashboard (Phase 12)
+
+> Phase 12 covers three things that share one code path and so ship together: the
+> single-page dashboard (§9.1–9.6), a mobile-first responsive rebuild (§9.7), and the
+> rename to **Profilecraft** with a real logo and favicon (§10).
+
+> This section supersedes §5's multi-page UX for everything except the *mechanics*
+> it describes (mock-data previews, theme-picker data model, copy-out formats,
+> permalinks). Those mechanics survive; the page topology does not.
+
+### 9.1 Why the current UI is being replaced
+
+The shipped UI spreads one workflow across four routes — `/build`, `/profile`,
+`/gallery`, `/themes`. Each is a full page navigation, so choosing a theme from the
+theme catalog means leaving the builder, and comparing gallery examples means
+leaving it again. `/build` itself is a two-column form-and-preview, which is a form
+page, not a workspace: there is no persistent chrome, no way to see themes and
+options at the same time, and the visual language is unstyled Tailwind defaults
+(`border`, `opacity-70`) rather than a design system.
+
+It also re-renders on **every keystroke**. `BuilderClient` debounces 250 ms and then
+fires a request to `/api/widget/<type>/preview` for each edit. That is cheap today
+only because the preview route is mock-backed — the moment a preview shows real
+GitHub data it becomes a rate-limit problem, and even against mock data it makes the
+preview flicker continuously while the user types a username.
+
+### 9.2 The target: one dashboard, no navigation
+
+**Everything lives at `/`.** One route, one persistent three-region shell, no page
+transitions between building a widget, picking a theme, browsing the gallery, or
+composing a full README. Switching between those is a state change inside the
+dashboard, not a navigation.
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Top bar: brand · mode switch · Sample|Live toggle · [Generate] · theme  │
+├────────────┬──────────────────────────────────┬──────────────────────────┤
+│ LEFT       │  CENTER — canvas                 │ RIGHT                    │
+│ sidebar    │                                  │ sidebar                  │
+│            │  ┌────────────────────────────┐  │  ┌────────────────────┐  │
+│ Mode:      │  │                            │  │  │ Themes (tab)       │  │
+│  Widget    │  │   rendered widget /        │  │  │  search + swatch   │  │
+│  README    │  │   README preview           │  │  │  grid, live apply  │  │
+│            │  │                            │  │  ├────────────────────┤  │
+│ Widget     │  └────────────────────────────┘  │  │ Gallery (tab)      │  │
+│  catalog   │                                  │  │  example cards →   │  │
+│  (22, in   │  [Generate]  ← bottom button     │  │  load into canvas  │  │
+│  groups)   │                                  │  └────────────────────┘  │
+│            │  Copy-out: MD · HTML · picture   │                          │
+│ Options    │  · URL · JSON · PNG · Action     │                          │
+│  accordion │                                  │                          │
+└────────────┴──────────────────────────────────┴──────────────────────────┘
+```
+
+- **Left sidebar** — the menu. Mode switch (Widget / README), the widget catalog
+  grouped by tier, and the option accordion for the selected widget. All 22 widgets
+  reachable without leaving the page.
+- **Center** — the canvas: the rendered preview, a **Generate** button above it and a
+  second one below it (per the explicit requirement — the user should never have to
+  scroll to find one), and the copy-out panel.
+- **Right sidebar** — tabbed **Themes** and **Gallery**. Both are today's `/themes`
+  and `/gallery` pages, reduced to panels that write into the dashboard's state
+  instead of linking to another route.
+
+Both sidebars collapse; below `lg` they become sheets (drawers) over the canvas so
+the layout survives a phone.
+
+### 9.3 Explicit render, not live render
+
+**Decision D11 — the preview renders only when the user asks for it.**
+
+Option edits mutate local state and mark the canvas *stale* (a visible "unsaved
+changes" affordance on both Generate buttons). No network request is made until
+Generate is pressed. This is the direct inversion of the current debounce-per-
+keystroke behaviour.
+
+Two data sources behind one button, chosen by a **Sample / Live** toggle in the top
+bar:
+
+| Mode | Endpoint | Cost | Default |
+| --- | --- | --- | --- |
+| **Sample** | `/api/widget/<type>/preview` | none — bundled mock data | ✅ |
+| **Live** | `/api/widget/<type>` | one GitHub API call (cached) | |
+
+Sample stays the default because it needs no username and costs nothing; Live is one
+click away and is what proves the widget against the user's real account. Live is
+disabled until the widget's identifying field (username/repo/gist id) is filled, with
+the reason stated on the button rather than a silent no-op.
+
+Consequences: the option form no longer needs debouncing at all; the URL permalink
+sync moves from a 250 ms timer to the Generate action plus mode/widget switches; and
+the "stale" state gives us an honest place to say *what you see is not what you have
+configured yet*, which the current continuously-updating preview cannot express.
+
+### 9.4 Design system — shadcn/ui
+
+The current UI has no design system. Adopting **shadcn/ui** (Radix primitives +
+Tailwind v4 tokens, sources vendored into the repo rather than imported from a
+package) gives accessible primitives for exactly the controls this dashboard is made
+of — Tabs, Accordion, Select, Slider, Switch, Sheet, Dialog, Tooltip, ScrollArea,
+Command (for theme/widget search) — plus a token set that finally gives the app its
+own light/dark theme instead of two hardcoded CSS variables.
+
+Vendored sources mean no runtime lock-in: the components are our files, editable in
+place. Cost is ~15 Radix packages plus `lucide-react`, `clsx`, `tailwind-merge`,
+`class-variance-authority` — all client-side, none touching the render pipeline.
+
+**The widget rendering engine is not affected.** `src/widgets/`, `src/lib/`, and
+`src/components/card/` (the JSX→SVG primitives) are untouched by this phase. Only
+`src/app/` changes. This is deliberate: the engine is verified and shipping, and a UI
+rewrite is not a reason to risk it.
+
+### 9.5 Route disposition
+
+| Route | Disposition |
+| --- | --- |
+| `/` | The dashboard. All modes. |
+| `/build` | Deleted → `redirect('/')`, preserving query params so existing deep links seed the dashboard. |
+| `/profile` | Deleted → `redirect('/?mode=readme')`. |
+| `/gallery` | Deleted → `redirect('/?panel=gallery')`. |
+| `/themes` | Deleted → `redirect('/?panel=themes')`. |
+| `/api/**` | Unchanged. The public widget API is the product's contract and does not move. |
+
+### 9.6 Risks
+
+- **shadcn init rewrites `globals.css`.** The existing file is 26 lines of
+  `create-next-app` defaults, so there is nothing of value to lose — but the Geist
+  font variables in `layout.tsx` must survive the rewrite.
+- **Right-sidebar gallery renders many SVGs at once.** Today `/gallery` renders 24
+  previews on a dedicated page; as a sidebar panel that cost is paid on every
+  dashboard load. Mitigated by lazy-loading (`loading="lazy"`) and rendering only the
+  active tab.
+- **README mode is the largest single piece.** `ProfileBuilderClient` is 394 lines
+  and owns its own layout. Porting it into the shell means keeping its state model
+  (`ProfileConfig`) intact while replacing every layout and control — a re-skin plus
+  a re-host, not a rewrite of its logic.
+- **Explicit render changes muscle memory** for anyone used to the live preview. The
+  stale indicator is the mitigation; if it proves annoying, an opt-in "auto-render"
+  switch is a small addition on top of this architecture (the reverse — adding
+  explicit render to a live-render UI — is the expensive direction, which is why this
+  is the right default to build first).
+
+### 9.7 Responsive strategy
+
+**Audit of the current UI** (measured, not assumed — `src/app/**/*.tsx`):
+
+| Finding | Evidence |
+| --- | --- |
+| Responsive design is essentially absent | **11 breakpoint utilities in the entire app**, and 4 of those are `md:p-10` padding. Only 3 of 13 UI files use any breakpoint at all. |
+| Option form is a hardcoded 2-column grid | `build/BuilderClient.tsx:166` — `grid-cols-2` with no `sm:`/`md:` guard. At 375 px each option control gets ~170 px; selects, color inputs and comma-list fields are unusable. |
+| Same bug in README mode | `profile/WidgetInstanceEditor.tsx:118` — `grid-cols-2`, unguarded. |
+| Theme picker is a hardcoded 4-column grid | `build/ThemePicker.tsx:29` — `grid-cols-4`, unguarded, inside an already-narrow column. Swatches collapse to ~70 px with `text-[10px]` truncated labels. |
+| Builder's two-column split only breaks at `md` | `BuilderClient.tsx:151` — `md:grid-cols-2`. Nothing between 375 px and 768 px is considered; tablet portrait (768 px) gets the full desktop two-column layout in a space that cannot hold it. |
+| Gallery and themes grids are the only correct ones | `sm:grid-cols-2 lg:grid-cols-3` — these two pages are fine, and are being deleted. |
+| No `themeColor` / `colorScheme` metadata | `layout.tsx` exports `metadata` only. Next's App Router *does* inject `width=device-width, initial-scale=1` by default (verified in `next/dist/lib/metadata/default-metadata.js`), so there is no missing-viewport bug — but the mobile browser chrome is unthemed. |
+| Touch targets are below the 44 px minimum | Copy buttons, theme swatches and badge toggles are `text-xs px-2 py-0.5` — roughly 20 px tall. |
+| `public/` is still create-next-app cruft | `file.svg`, `globe.svg`, `next.svg`, `vercel.svg`, `window.svg`, plus the default Vercel `favicon.ico`. |
+
+**Decision**: do not patch any of the above. Every file listed is deleted or rewritten
+by Phase 12, so fixing it now is work thrown away twice. Instead the dashboard is built
+**mobile-first**, against an explicit breakpoint contract:
+
+| Width | Layout |
+| --- | --- |
+| **< 640 px** (phone) | Single column. Both sidebars become `Sheet` drawers opened from the top bar. Canvas full-bleed; the widget preview scales to fit. Generate is a sticky bottom bar so it is always reachable without scrolling. Option grid is 1 column. |
+| **640–1023 px** (tablet portrait) | Canvas + one sidebar at a time; the other is a drawer. Option grid 2 columns. Theme swatch grid 3 columns. |
+| **1024–1279 px** (tablet landscape / small laptop) | Left sidebar docked, right sidebar collapsible and collapsed by default. |
+| **≥ 1280 px** (desktop) | Full three-region shell as drawn in §9.2, both sidebars docked. |
+
+Plus: a 44 px minimum touch target on every interactive element below `lg`; no
+horizontal page scroll at any width (wide content — copy-out blocks, wide widget SVGs —
+scrolls inside its own container); and `themeColor` + `colorScheme` metadata so mobile
+browser chrome matches the active theme.
+
+---
+
+## 10. Brand & identity
+
+The repository is named `github-readme-stats` and the npm package is
+`github-readme-streak-stats` — both are inherited from the single-widget prototype this
+project outgrew, and the first is the name of a *different, well-known* project
+(anuraghazra's). Shipping a dashboard under a name that collides with the ecosystem's
+best-known card service is a liability, not a shortcut to recognition.
+
+**Decision — the product is named `Profilecraft`.**
+
+Rationale: it covers the actual scope. This is not a stats-card endpoint; it is 22
+widgets, 77 themes, a badge system, a tech-icon library and a full README composer. The
+name says "the whole profile", which is what Pillar B is, and it leaves room to grow past
+GitHub without a rename. It is also distinct enough from every project surveyed in §2 to
+be searchable on its own.
+
+**Logo — a geometric card-stack mark.**
+
+Three offset rounded rectangles, back-to-front, the frontmost in the accent colour. It
+depicts the product literally (a stack of cards is exactly what a profile README is),
+survives reduction to 16 px because it is three solid shapes with no interior detail, and
+is themeable from CSS custom properties in both light and dark without a second asset.
+
+Authored as hand-written SVG, not generated: a `<Logo />` React component for in-app use
+(inherits `currentColor`, so it re-themes for free) and static files for the favicon,
+Apple touch icon, and Open Graph card.
+
+**What the rename touches**: `package.json` name, `layout.tsx` metadata, `README.md`
+title and prose, the docs headers, and the `public/` asset set (which is currently the
+untouched create-next-app placeholder SVGs). It does **not** touch the API surface —
+`/api/widget/<type>` and the back-compat `/api/streak*` aliases are the product's
+contract and are unaffected by what the product is called.

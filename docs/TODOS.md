@@ -9,6 +9,7 @@ Phase-by-phase task breakdown. Rationale for every decision is in [PLAN.md](./PL
 - ✅ **MVP** = Phases 0–3 (streak + stats + top-langs + pins, working widget builder, copy-out) — **complete**, gist support shipped alongside pins as well
 - ✅ **v1.0** = Phases 0–5 (adds the profile README builder, i18n, and delivery modes) — **complete**
 - **v1.5+** = Phases 6–10 (remaining widgets, scaling); Phase 11 is explicitly out of scope
+- 🔵 **v2.0** = Phase 12 — **Profilecraft**: rebrand + logo/favicon, a single-page shadcn dashboard replacing the four-route UI, mobile-first (see [PLAN.md §9–10](./PLAN.md))
 
 Phase order reflects **D8**: the profile README builder ships before widgets 5–15, because
 it is the differentiator and is worth more atop four widgets than a fifth widget is worth
@@ -260,3 +261,116 @@ just asserted.
 - No new npm dependencies were added — Medium's feed is parsed with a small hand-written, feed-specific regex extractor rather than pulling in a general RSS/Atom parsing library, keeping this phase's dependency footprint at zero.
 - `medium`, `stackoverflow`, and `npm-downloads` all set `requiresGithubToken: false` (Phase 9's flag) since none of them call the GitHub API at all; `skyline` and `roster` both do (contribution data and repo stargazers/forks respectively) and still require `GITHUB_TOKEN`.
 - `tsc --noEmit` and `next build` both clean after every change in this phase. No automated tests were written per this session's instructions — verified via live `curl` smoke tests against the real Medium, Stack Exchange, npm, and GitHub APIs (not mocks) for every new widget, across svg/json/png formats, the mock-data preview route, and one RTL-locale check.
+
+---
+
+## 🔵 Phase 12 — Profilecraft: rebrand + single-page dashboard UI rewrite
+
+Rationale and layout in [PLAN.md §9](./PLAN.md#9-ui-rewrite--the-single-page-dashboard-phase-12).
+Replaces the four-route UI (`/build`, `/profile`, `/gallery`, `/themes`) with one
+dashboard at `/`, built on shadcn/ui, rendering **only on an explicit Generate press**
+(D11) instead of on every keystroke.
+
+Also renames the product to **Profilecraft** ([PLAN.md §10](./PLAN.md#10-brand--identity))
+and rebuilds the UI **mobile-first** ([PLAN.md §9.7](./PLAN.md#97-responsive-strategy)) —
+the current UI has 11 breakpoint utilities in total and is unusable on a phone.
+
+**Scope guard**: this phase touches `src/app/`, plus `package.json`'s name and the
+`public/` asset set. `src/widgets/`, `src/lib/`, and `src/components/card/` — the
+verified render engine — are not modified. The public API surface (`/api/widget/*`,
+`/api/streak*`) does not change.
+
+**Build order**: **12.6 (brand) → 12.1 (foundation) → 12.2 (state) → 12.7 (responsive,
+concurrent with every layout task) → 12.3 (panels) → 12.4 (README mode) → 12.5 (cleanup)**.
+Brand goes first because `shadcn init` rewrites `globals.css` and the accent token belongs
+in that same pass; responsive is not a trailing phase but a constraint applied as each
+layout is built.
+
+### 12.1 Foundation
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.1 | shadcn/ui init | `npx shadcn@latest init` against Tailwind v4 / React 19: `components.json`, `src/lib/utils.ts` (`cn`), token-based `globals.css`. Preserve the Geist font variables wired up in `layout.tsx`. | P0 | todo |
+| 12.2 | Component install | `button card tabs accordion select input label switch slider separator scroll-area sheet tooltip badge command dialog popover skeleton sonner` into `src/components/ui/`. Verify no name collision with `src/components/card/` (SVG primitives — different directory, different purpose). | P0 | todo |
+| 12.3 | Design tokens & dark mode | App-level palette (accent, surface elevations, borders) on top of shadcn's token set; a real light/dark toggle replacing the current `prefers-color-scheme`-only two-variable setup. Persist choice in `localStorage`. | P1 | todo |
+| 12.4 | Dashboard shell | `src/app/dashboard/` (client components mounted by `page.tsx`): top bar + collapsible left sidebar + canvas + collapsible right sidebar, CSS-grid based, full viewport height with independently scrolling regions. | P0 | todo |
+| 12.5 | Responsive shell | Below `lg`, both sidebars become `Sheet` drawers triggered from the top bar; the canvas stays full-width. Verified at 375 / 768 / 1280 / 1920. | P1 | todo |
+
+### 12.2 State & rendering model
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.6 | Dashboard state store | One `useReducer` (or context) owning: mode (`widget`/`readme`), selected widget, form state, theme, data mode (`sample`/`live`), rendered-preview URL, and a `dirty` flag. Replaces `BuilderClient`'s scattered `useState`s. | P0 | todo |
+| 12.7 | Explicit render action | Remove the 250 ms debounce entirely. `generate()` composes the query string and sets the preview URL; nothing else triggers a fetch. Reuses `buildQueryString`/`fieldValue` from the current `build/query.ts` (moved, not rewritten). | P0 | todo |
+| 12.8 | Sample / Live toggle | Top-bar segmented control. Sample → `/api/widget/<type>/preview` (default, zero cost). Live → `/api/widget/<type>`, disabled with an explanatory tooltip until the identifying field is filled. | P0 | todo |
+| 12.9 | Stale-state affordance | Editing any option sets `dirty`; both Generate buttons show the pending state and the canvas is visibly marked as not reflecting current settings. Clears on a successful render. | P1 | todo |
+| 12.10 | Dual Generate buttons | One above the canvas, one below the option/copy-out stack, both bound to the same action — the explicit requirement that a Generate is always reachable without scrolling. | P0 | todo |
+| 12.11 | Render feedback | `Skeleton` while the image loads; an inline error surface when the endpoint returns a non-200 (live mode: bad username, rate limit, missing token) instead of a broken `<img>`. | P1 | todo |
+| 12.12 | Permalink sync | `history.replaceState` on generate + mode/widget/theme switch (not on keystroke); the dashboard seeds from `useSearchParams()` on load, absorbing the old `/build?_widget=…` deep-link format unchanged. | P1 | todo |
+
+### 12.3 Panels
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.13 | Left: widget catalog | All 22 `WIDGET_CATALOG` entries, grouped (Core GitHub / Differentiated / Companion / Ecosystem), searchable via `Command`, each with an icon. Selecting one resets options but keeps the theme — the existing `handleWidgetTypeChange` rule. | P0 | todo |
+| 12.14 | Left: options accordion | Re-skin `OptionField`'s dispatch onto shadcn controls (`Input`/`Select`/`Switch`/`Slider`/color/toggle-group), grouped into **Identity · Content · Colors · Layout · Advanced** accordion sections rather than one flat two-column list. Keeps all schema-driven behaviour and the `locale`/`date_format`/`exclude_days`/badge special cases. | P0 | todo |
+| 12.15 | Right: Themes panel | The `/themes` catalog as a sidebar tab: searchable swatch grid over all 77 presets, click applies instantly (client-side, no fetch — theme change alone may re-render since it costs nothing, or respect `dirty` for consistency; decide in implementation and document the choice). Replaces `ThemePicker`. | P0 | todo |
+| 12.16 | Right: Gallery panel | The `/gallery` taxonomy as a sidebar tab: sectioned example cards that load their widget type + params into the dashboard on click instead of navigating. Lazy-load the preview images; render only when the tab is active. | P0 | todo |
+| 12.17 | Center: copy-out | `CopyPanel` re-skinned as a shadcn `Tabs` block (Markdown / HTML / picture / URL / JSON / PNG / GitHub Action) with `sonner` toasts on copy, replacing the current stacked `<pre>` list and per-block copy buttons. | P1 | todo |
+
+### 12.4 README mode (Pillar B, in-shell)
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.18 | README mode host | `ProfileBuilderClient` rehosted inside the same shell: identity/socials/tech-stack/widget-list controls in the left sidebar, live README preview in the canvas, themes + starter templates in the right sidebar. `ProfileConfig` and `exportReadme` logic preserved verbatim. | P0 | todo |
+| 12.19 | README mode re-skin | Every control ported to shadcn; widget instance rows become sortable cards with inline edit in a `Dialog`/`Popover` rather than the current always-expanded `WidgetInstanceEditor`. | P1 | todo |
+| 12.20 | README explicit render | Same D11 rule: the README preview's widget images refresh on Generate, not per edit. Markdown/text edits (name, bio) may update the text preview immediately — they cost no network. | P1 | todo |
+| 12.21 | Templates in-panel | The 5 starter templates become a right-sidebar tab in README mode instead of an inline row. | P2 | todo |
+
+### 12.5 Cleanup
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.22 | Route redirects | Delete `src/app/{build,profile,gallery,themes}/page.tsx`; replace each with a `redirect()` that maps its old query string into the dashboard's (`/build?_widget=x` → `/?_widget=x`, `/profile` → `/?mode=readme`, `/gallery` → `/?panel=gallery`, `/themes` → `/?panel=themes`). | P0 | todo |
+| 12.23 | Move shared builder modules | `build/query.ts`, `build/workflowYaml.ts`, `profile/*.ts` helpers relocated under the dashboard directory; imports updated. No logic changes. | P1 | todo |
+| 12.24 | README.md + docs update | Fix every `/build`, `/profile`, `/gallery`, `/themes` reference in `README.md` and `PROJECT-DOCUMENTATION.md` §1/§2/§7; document the Generate-button model and the Sample/Live toggle. | P1 | todo |
+| 12.25 | Build + manual verification | `npm run build` clean; walk every widget type through Sample and Live, both sidebars, all copy-out tabs, README mode export, and the four redirects. | P0 | todo |
+
+### 12.6 Brand & identity — "Profilecraft"
+
+Rationale in [PLAN.md §10](./PLAN.md#10-brand--identity). The inherited name
+`github-readme-stats` collides with anuraghazra's project; the product is renamed
+**Profilecraft** and gets a real mark. Do this group **first** — 12.1's `shadcn init`
+rewrites `globals.css`, and the brand accent colour belongs in that same token pass.
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.26 | Card-stack logo mark | Hand-authored SVG: three offset rounded rectangles, frontmost in the accent colour. Two variants — a detailed one for headers and a simplified 16 px one (fewer cards, thicker strokes) for the favicon, since the full mark muddies below ~24 px. | P0 | todo |
+| 12.27 | `<Logo />` component | `src/components/brand/Logo.tsx` — `currentColor`-driven so it re-themes with the app in light/dark with no second asset; size prop; optional wordmark lockup (mark + "Profilecraft"). | P0 | todo |
+| 12.28 | Favicon set | Replace the create-next-app `src/app/favicon.ico`. Ship `icon.svg` (modern browsers), `favicon.ico` (32+16 px), `apple-icon.png` (180 px), all via Next's App-Router file conventions in `src/app/`. Verified rendering at 16 px, not just eyeballed at 512. | P0 | todo |
+| 12.29 | Open Graph / social card | `src/app/opengraph-image.tsx` — a 1200×630 card using the mark, the name, and the tagline. Rendered by the same SVG pipeline the widgets use, so there is no new dependency. | P2 | todo |
+| 12.30 | Purge starter assets | Delete `public/{file,globe,next,vercel,window}.svg` — untouched create-next-app placeholders, none referenced anywhere. | P1 | todo |
+| 12.31 | Rename across the project | `package.json` `name` → `profilecraft`; `layout.tsx` metadata (title, description, `applicationName`, `themeColor`, `colorScheme`, `icons`); `README.md` title and prose; doc headers in `PLAN.md` / `TODOS.md` / `PROJECT-DOCUMENTATION.md`. **Does not touch the API surface** — `/api/widget/*` and the `/api/streak*` aliases are the product contract. | P0 | todo |
+| 12.32 | Brand accent token | Pick the accent colour once, define it as a CSS custom property alongside 12.3's token set, and consume it from both the logo and the UI. One source of truth, not a hex repeated across files. | P1 | todo |
+
+### 12.7 Responsive — mobile & tablet
+
+Audit findings and the breakpoint contract are in
+[PLAN.md §9.7](./PLAN.md#97-responsive-strategy). Summary of what was measured: **11
+breakpoint utilities in the whole app**, 4 of them padding; `grid-cols-2` unguarded in
+`BuilderClient.tsx:166` and `WidgetInstanceEditor.tsx:118`; `grid-cols-4` unguarded in
+`ThemePicker.tsx:29`; the builder's only split is `md:grid-cols-2`, so tablet portrait
+gets the desktop layout; touch targets around 20 px. **None of this is patched** — every
+one of those files is deleted or rewritten by Phase 12, so the dashboard is instead built
+mobile-first against the contract below.
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.33 | Mobile-first shell (< 640 px) | Single column; both sidebars are `Sheet` drawers opened from the top bar; canvas full-bleed; **sticky bottom Generate bar** (the phone equivalent of 12.10's dual buttons); option grid 1 column. | P0 | todo |
+| 12.34 | Tablet portrait (640–1023 px) | Canvas + one docked sidebar, the other a drawer. Option grid 2 columns, theme swatch grid 3 columns. This is the width the current UI fails hardest at. | P0 | todo |
+| 12.35 | Tablet landscape / small laptop (1024–1279 px) | Left sidebar docked; right sidebar collapsible, collapsed by default so the canvas keeps its width. | P1 | todo |
+| 12.36 | Desktop (≥ 1280 px) | Full three-region shell per PLAN.md §9.2, both sidebars docked. | P0 | todo |
+| 12.37 | Touch targets | 44 px minimum on every interactive element below `lg` — copy buttons, theme swatches, badge toggles, widget rows. The current UI's `text-xs px-2 py-0.5` controls are ~20 px. | P1 | todo |
+| 12.38 | No horizontal page scroll | At any width. Wide content (copy-out blocks, wide widget SVGs, the README preview) scrolls inside its own container, never the page body. | P1 | todo |
+| 12.39 | Mobile browser chrome | `themeColor` + `colorScheme` in `layout.tsx`'s `viewport` export so the phone's address bar matches the active light/dark theme. (Next already injects `width=device-width, initial-scale=1` — verified — so no viewport meta fix is needed.) | P2 | todo |
+| 12.40 | Responsive verification pass | Walk both modes, all four panels and the copy-out at **375 / 768 / 1024 / 1440 / 1920**, plus a real touch device. Record what was checked, the same way earlier phases recorded their manual verification. | P0 | todo |
