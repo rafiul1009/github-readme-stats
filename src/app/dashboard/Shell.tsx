@@ -15,7 +15,6 @@ import { WidgetCatalogPanel } from "./WidgetCatalogPanel";
 import { OptionsPanel } from "./OptionsPanel";
 import { ThemesPanel } from "./ThemesPanel";
 import { GalleryPanel } from "./GalleryPanel";
-import { DataModeToggle } from "./DataModeToggle";
 import { GenerateButton } from "./GenerateButton";
 import { ReadmeSidebar } from "./readme/ReadmeSidebar";
 import { ReadmeCanvas } from "./readme/ReadmeCanvas";
@@ -24,17 +23,19 @@ import type { Panel } from "./state";
 import { syncPermalink } from "./permalink";
 
 /**
- * The dashboard shell (docs/TODOS.md 12.4 / 12.5 / 12.33-12.36).
+ * The dashboard shell (docs/TODOS.md 12.4 / 12.5 / 12.33-12.36 / 12.45).
  *
- * Breakpoint contract, per PLAN.md §9.7. `xl` is the docking breakpoint for
- * both sidebars because three docked regions plus a ~500px-wide widget preview
- * genuinely need ~1280px; below that a sidebar is a Sheet, which is honest
- * about the space rather than crushing the canvas.
+ * Breakpoint contract, per PLAN.md §9.7. Widget mode's left side is **two**
+ * docked columns from `lg` — the widget catalogue and its option accordion
+ * side by side rather than stacked in one scroll region (task 12.45), so
+ * picking a widget and tuning it don't compete for the same vertical space.
+ * README mode keeps a single sidebar (`ReadmeSidebar`), since it has no
+ * separate "pick one of many" catalogue browsing step.
  *
  *   < 640px   one column, both sidebars are Sheets, sticky bottom Generate
  *   640-1023  one column + Sheets, but denser grids inside the panels
- *   1024-1279 left sidebar docked, right sidebar a Sheet
- *   >= 1280   full three-region shell
+ *   1024-1279 left column(s) docked, right sidebar a Sheet
+ *   >= 1280   full shell, right sidebar docked too
  */
 export function Shell() {
   const { state } = useDashboard();
@@ -55,14 +56,35 @@ export function Shell() {
       <TopBar onToggleLeft={() => setLeftOpen(true)} onToggleRight={() => setRightOpen(true)} />
 
       <div className="flex flex-1 min-h-0">
-        {/* Left sidebar — docked from lg (task 12.35). */}
-        <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col border-r bg-sidebar/40">
-          <ScrollArea className="flex-1">
-            <div className="p-3">
-              <LeftContent />
-            </div>
-          </ScrollArea>
-        </aside>
+        {state.mode === "widget" ? (
+          <>
+            {/* Widget catalogue — its own docked column (task 12.45). */}
+            <aside className="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col border-r bg-sidebar/40">
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <WidgetCatalogPanel />
+                </div>
+              </ScrollArea>
+            </aside>
+
+            {/* That widget's options — a second, wider docked column. */}
+            <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col border-r bg-sidebar/40">
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <OptionsPanel />
+                </div>
+              </ScrollArea>
+            </aside>
+          </>
+        ) : (
+          <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col border-r bg-sidebar/40">
+            <ScrollArea className="flex-1">
+              <div className="p-3">
+                <ReadmeSidebar />
+              </div>
+            </ScrollArea>
+          </aside>
+        )}
 
         {/* Canvas. */}
         <main className="flex-1 min-w-0 flex flex-col">
@@ -90,9 +112,8 @@ export function Shell() {
           </ScrollArea>
 
           {/* Phones get it as a sticky bar instead, so it never needs scrolling to (task 12.33). */}
-          <div className="sm:hidden shrink-0 border-t bg-background/95 backdrop-blur p-2 flex items-center gap-2">
-            {state.mode === "widget" && <DataModeToggle />}
-            <GenerateButton className="flex-1 h-11" />
+          <div className="sm:hidden shrink-0 border-t bg-background/95 backdrop-blur p-2">
+            <GenerateButton className="w-full h-11" />
           </div>
         </main>
 
@@ -112,6 +133,9 @@ export function Shell() {
             </SheetTitle>
           </SheetHeader>
           <ScrollArea className="flex-1">
+            {/* The Sheet is space-constrained, so mobile keeps both columns
+                stacked in one scroll region rather than the desktop's
+                side-by-side split. */}
             <div className="p-3">
               <LeftContent />
             </div>
@@ -134,6 +158,7 @@ export function Shell() {
   );
 }
 
+/** The mobile/tablet drawer's combined content — see the Sheet above. */
 function LeftContent() {
   const { state } = useDashboard();
 
@@ -141,7 +166,7 @@ function LeftContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <WidgetCatalogPanel />
+      <WidgetCatalogPanel bounded />
       <Separator />
       <OptionsPanel />
     </div>

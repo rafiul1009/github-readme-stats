@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "./context";
-import { DataModeToggle } from "./DataModeToggle";
 import { GenerateButton } from "./GenerateButton";
 import { ThemeToggle } from "./ThemeToggle";
 import type { Mode } from "./state";
@@ -62,14 +61,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: TopBarProps) {
 
       <div className="flex-1" />
 
-      {state.mode === "widget" && (
-        <>
-          <div className="hidden md:block">
-            <DataModeToggle />
-          </div>
-          <GenerateButton className="hidden sm:inline-flex" />
-        </>
-      )}
+      {state.mode === "widget" && <GenerateButton className="hidden sm:inline-flex" />}
 
       <ThemeToggle />
 

@@ -7,8 +7,21 @@ import { cn } from "@/lib/utils";
 import { useDashboard } from "./context";
 import { groupedWidgets, WIDGET_ICONS } from "./widgetGroups";
 
-/** The left sidebar's widget picker (docs/TODOS.md 12.13). */
-export function WidgetCatalogPanel() {
+export interface WidgetCatalogPanelProps {
+  /**
+   * Caps the list's own height and scrolls inside it, rather than filling
+   * its container. Needed only where this panel shares a scroll region with
+   * something else — the mobile/tablet drawer, which stacks the catalogue
+   * above the option accordion (task 12.45) — since without a bound there,
+   * 22 widgets would push the options below the fold. The desktop column in
+   * Shell.tsx gives this panel its own dedicated ScrollArea instead, so it
+   * fills that column's full height unbounded.
+   */
+  bounded?: boolean;
+}
+
+/** The widget picker (docs/TODOS.md 12.13 / 12.45) — its own sidebar column on desktop. */
+export function WidgetCatalogPanel({ bounded = false }: WidgetCatalogPanelProps) {
   const { state, dispatch } = useDashboard();
   const [query, setQuery] = useState("");
 
@@ -38,10 +51,7 @@ export function WidgetCatalogPanel() {
         />
       </div>
 
-      {/* The catalog scrolls inside itself. Without a bound, 22 widgets push
-          the options accordion — the thing being configured — off-screen
-          entirely on a 1024px-tall laptop. */}
-      <div className="flex flex-col gap-3 max-h-[34vh] lg:max-h-[38vh] overflow-y-auto -mr-1 pr-1">
+      <div className={cn("flex flex-col gap-3", bounded && "max-h-[34vh] overflow-y-auto -mr-1 pr-1")}>
       {groups.length === 0 && (
         <p className="text-xs text-muted-foreground py-4 text-center">No widget matches “{query}”.</p>
       )}

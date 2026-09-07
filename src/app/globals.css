@@ -10,7 +10,17 @@
   --color-brand-subtle: var(--brand-subtle);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  /*
+   * Composed here, not written directly on Geist's own variable, because a
+   * custom property cannot reference itself inside var() — see layout.tsx.
+   * The explicit sans-serif stack after Geist is the actual fix for a serif
+   * fallback ever showing (docs/TODOS.md 12.42): Geist's own next/font
+   * fallback only guarantees a metrics-matched local font, not the generic
+   * `sans-serif` keyword, so without this line a font-loading failure could
+   * fall through to the browser/OS default, which on some platforms is serif.
+   */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -61,7 +71,7 @@
   --brand-foreground: oklch(0.985 0 0);
   --brand-subtle: oklch(0.96 0.02 288);
   --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --foreground: oklch(0.09 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -71,7 +81,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.4 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -85,7 +95,7 @@
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-foreground: oklch(0.09 0 0);
   --sidebar-primary: var(--brand);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);

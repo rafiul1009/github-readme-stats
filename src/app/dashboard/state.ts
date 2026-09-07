@@ -6,9 +6,12 @@ import { emptyProfileConfig, type ProfileConfig } from "./readme/types";
 export type Mode = "widget" | "readme";
 
 /**
- * Where a render's data comes from (D11 / task 12.8). `sample` uses the
- * bundled mock data behind `/preview` — instant, no username, no rate-limit
- * cost. `live` hits the real GitHub-backed endpoint.
+ * Where a render's data came from. There is no user-facing toggle for this
+ * (docs/TODOS.md 12.43, superseding 12.8's Sample/Live switch) — it is
+ * derived automatically from whether the widget's identifying field
+ * (username/repo/gist id/...) is filled: filled -> the real GitHub-backed
+ * endpoint; empty -> the bundled mock-data `/preview` endpoint. One button
+ * (Generate), one rule, no mode to remember to flip.
  */
 export type DataMode = "sample" | "live";
 
@@ -27,16 +30,15 @@ export interface DashboardState {
   panel: Panel;
   widgetType: string;
   form: FormState;
-  dataMode: DataMode;
   profile: ProfileConfig;
   /**
-   * True when the configuration has changed since the last Generate. This is
+   * True when the configuration has changed since the last render. This is
    * the whole point of D11: the canvas is allowed to be out of date, and the
    * UI says so rather than silently chasing every keystroke.
    */
   dirty: boolean;
   rendered: RenderedPreview | null;
-  /** Bumped by every generate so README mode's widget images refetch too. */
+  /** Bumped by every render so README mode's widget images refetch too. */
   renderNonce: number;
 }
 
@@ -47,7 +49,6 @@ export type DashboardAction =
   | { type: "setField"; name: string; value: FormValue }
   | { type: "setTheme"; theme: string }
   | { type: "clearOptions" }
-  | { type: "setDataMode"; dataMode: DataMode }
   | { type: "loadExample"; widgetType: string; params: Record<string, string> }
   | { type: "setProfile"; profile: ProfileConfig }
   | { type: "generate" };
@@ -66,7 +67,6 @@ export function initialState(): DashboardState {
     panel: "themes",
     widgetType: DEFAULT_WIDGET,
     form: {},
-    dataMode: "sample",
     profile: emptyProfileConfig(),
     dirty: false,
     rendered: null,
@@ -83,13 +83,14 @@ export function identifyingValue(state: DashboardState): string {
 }
 
 /**
- * Live mode needs something to look up. Widgets with no identifying field
- * (e.g. quote) are always allowed.
+ * The data source a render would use right now: `live` once the identifying
+ * field is filled in, `sample` otherwise. A widget with no identifying field
+ * at all (e.g. quote) has nothing to wait on, so it always renders live.
  */
-export function canRenderLive(state: DashboardState): boolean {
+export function resolveDataMode(state: DashboardState): DataMode {
   const entry = getWidgetCatalogEntry(state.widgetType);
-  if (!entry?.identifyingField) return true;
-  return identifyingValue(state).trim().length > 0;
+  if (!entry?.identifyingField) return "live";
+  return identifyingValue(state).trim().length > 0 ? "live" : "sample";
 }
 
 /** The embeddable URL for the current configuration — no nonce, no /preview. */
@@ -99,18 +100,16 @@ export function embedUrl(state: DashboardState, origin: string): string {
   return `${origin}/api/widget/${entry.type}${qs ? `?${qs}` : ""}`;
 }
 
-function previewSrc(state: DashboardState, nonce: number): string {
+function renderNow(state: DashboardState, nonce: number): RenderedPreview {
   const entry = getWidgetCatalogEntry(state.widgetType) ?? WIDGET_CATALOG[0];
+  const dataMode = resolveDataMode(state);
   const params = new URLSearchParams(buildQueryString(entry.schema, state.form));
-  // A nonce so pressing Generate always produces a visible render, even when
+  // A nonce so a repeat Generate always produces a visible change, even when
   // nothing in the query changed — otherwise the button would silently no-op
   // on a repeat press in live mode, where refetching is the point.
   params.set("_r", String(nonce));
-  const base =
-    state.dataMode === "sample"
-      ? `/api/widget/${entry.type}/preview`
-      : `/api/widget/${entry.type}`;
-  return `${base}?${params.toString()}`;
+  const base = dataMode === "sample" ? `/api/widget/${entry.type}/preview` : `/api/widget/${entry.type}`;
+  return { src: `${base}?${params.toString()}`, dataMode, widgetType: entry.type };
 }
 
 export function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
@@ -128,15 +127,32 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
 
     case "selectWidget": {
       if (action.widgetType === state.widgetType) return state;
+      const prevEntry = getWidgetCatalogEntry(state.widgetType);
+      const nextEntry = getWidgetCatalogEntry(action.widgetType);
+
       // Options are widget-specific (even the identifying field differs), so
-      // only the theme — a concept every widget shares — survives a switch.
-      const theme = state.form.theme;
-      return {
-        ...state,
-        widgetType: action.widgetType,
-        form: theme === undefined ? {} : { theme },
-        dirty: true,
-      };
+      // only two things survive a switch: the theme, and the identifying
+      // value when both widgets identify by the same field name (almost
+      // always "username" — 14 of 22 widgets). That is what lets picking a
+      // new widget immediately show *your* data instead of resetting to a
+      // blank form (docs/TODOS.md 12.44).
+      const form: FormState = {};
+      if (state.form.theme !== undefined) form.theme = state.form.theme;
+      if (
+        nextEntry?.identifyingField &&
+        nextEntry.identifyingField === prevEntry?.identifyingField &&
+        state.form[nextEntry.identifyingField] !== undefined
+      ) {
+        form[nextEntry.identifyingField] = state.form[nextEntry.identifyingField];
+      }
+
+      const next: DashboardState = { ...state, widgetType: action.widgetType, form };
+      // Auto-render immediately on switch: live if the carried-over
+      // identifying value survived, sample otherwise — never leaves the
+      // canvas showing the *previous* widget's card under the new widget's
+      // selected name in the sidebar.
+      const nonce = state.renderNonce + 1;
+      return { ...next, dirty: false, renderNonce: nonce, rendered: renderNow(next, nonce) };
     }
 
     case "setField":
@@ -150,10 +166,6 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
 
     case "clearOptions":
       return { ...state, form: {}, dirty: true };
-
-    case "setDataMode":
-      if (action.dataMode === state.dataMode) return state;
-      return { ...state, dataMode: action.dataMode, dirty: true };
 
     case "loadExample": {
       const form: FormState = {};
@@ -173,16 +185,7 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
 
     case "generate": {
       const nonce = state.renderNonce + 1;
-      return {
-        ...state,
-        dirty: false,
-        renderNonce: nonce,
-        rendered: {
-          src: previewSrc(state, nonce),
-          dataMode: state.dataMode,
-          widgetType: state.widgetType,
-        },
-      };
+      return { ...state, dirty: false, renderNonce: nonce, rendered: renderNow(state, nonce) };
     }
 
     default:

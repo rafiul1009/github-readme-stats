@@ -19,7 +19,6 @@ export function syncPermalink(state: DashboardState): void {
   params.set(WIDGET_QUERY_KEY, entry.type);
   if (state.mode !== "widget") params.set("mode", state.mode);
   if (state.panel !== "themes") params.set("panel", state.panel);
-  if (state.dataMode !== "sample") params.set("data", state.dataMode);
 
   const url = new URL(window.location.href);
   url.search = params.toString();
@@ -50,7 +49,8 @@ export function stateFromSearchParams(search: URLSearchParams): Partial<Dashboar
 
   const mode = search.get("mode");
   const panel = search.get("panel");
-  const data = search.get("data");
+  // A stray legacy `data=` param from a pre-12.43 link is silently ignored —
+  // data mode is derived automatically now, not restorable state.
 
   return {
     ...(entry ? { widgetType: entry.type } : {}),
@@ -59,7 +59,6 @@ export function stateFromSearchParams(search: URLSearchParams): Partial<Dashboar
     ...(panel === "gallery" || panel === "templates" || panel === "themes"
       ? { panel: panel as DashboardState["panel"] }
       : {}),
-    ...(data === "live" ? { dataMode: "live" as const } : {}),
     // A URL that already carries options describes a configuration nobody has
     // rendered yet, so the canvas starts stale rather than pretending otherwise.
     dirty: Object.keys(form).length > 0,

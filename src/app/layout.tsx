@@ -6,9 +6,10 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
-  // shadcn's token set reads --font-sans; keeping the Geist alias too so any
-  // pre-existing --font-geist-sans reference stays valid.
-  variable: "--font-sans",
+  // Named --font-geist (not --font-sans) so globals.css can compose it with an
+  // explicit sans-serif fallback chain — var() cannot reference the same
+  // custom property it defines, so --font-sans itself has to be a distinct name.
+  variable: "--font-geist",
   subsets: ["latin"],
 });
 

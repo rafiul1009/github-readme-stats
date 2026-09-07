@@ -42,7 +42,7 @@ export function OptionsPanel() {
             onChange={(e) => dispatch({ type: "setField", name: identifyingField, value: e.target.value })}
           />
           <p className="text-[11px] text-muted-foreground mt-1.5">
-            Required to render live data or copy an embed.
+            Filled in: Generate fetches your real data. Empty: Generate shows a sample card instead.
           </p>
         </div>
       )}

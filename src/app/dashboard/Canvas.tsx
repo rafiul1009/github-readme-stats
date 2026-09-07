@@ -67,7 +67,7 @@ export function Canvas() {
           {state.dirty && rendered
             ? "Settings changed — regenerate to see them."
             : rendered?.dataMode === "sample"
-              ? "Sample data, not your real GitHub stats. Switch to Live to check your own."
+              ? "Sample data, not your real GitHub stats — fill in the identifying field and Generate to fetch your own."
               : rendered
                 ? "Rendered from your real GitHub data."
                 : "Press Generate to render this widget."}
