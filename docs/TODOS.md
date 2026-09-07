@@ -413,3 +413,17 @@ Verified: `npx tsc --noEmit` and `npm run build` clean; a production `next start
 widget preview endpoints) still 200s; Puppeteer end-to-end checks confirm the scroll fix,
 the exact `rgb(42, 44, 44)` computed colour, normal-weight labels, and the corrected font
 cascade — not screenshots alone.
+
+### 12.11 Third round of user feedback
+
+| # | Task | Details | Pri | Status |
+| --- | --- | --- | --- | --- |
+| 12.50 | ✅ Theme selection auto-renders, no Generate click | **Reverses** 12.15's original stance ("a theme change is a fetch like any other, gated behind Generate like everything else"). User feedback: a theme is a palette, not a data change, and requiring a manual click to see it made it look like picking a theme calls the GitHub API — which is exactly backwards. `state.ts`'s `setTheme` case now uses a new shared `renderImmediately()` helper (factored out of `selectWidget`'s existing auto-render logic) instead of just setting `dirty: true`. **Verified this doesn't do what it sounds like it might**: a theme click still re-requests `/api/widget/<type>` when in live mode (rendering happens server-side, so *some* request is unavoidable), but the server's own raw-data cache is keyed by widget type + username, not by theme — confirmed against the running server's own request log: the first (username) render logged `"dataCacheHit":false,"durationMs":1272` (the real GitHub fetch), the following theme-only click logged `"dataCacheHit":true,"durationMs":1` (no GitHub call, just a re-render of already-fetched data). `ThemesPanel.tsx`'s header comment rewritten to match. | P0 | done |
+| 12.51 | ✅ Removed the redundant bottom Generate button | The large centered button `Shell.tsx` mounted below the copy-out panel (12.10's "second Generate", added so a Generate was reachable without scrolling back up) is gone. With 12.50 in place, the two things that used to require scrolling back up to Generate — switching widgets and picking a theme — now render themselves; what's left needing a manual Generate is typing into an option field, which happens at the top of the sidebar where the top-bar and canvas-footer buttons are already in view. The top-bar button, the canvas-footer button, and the phone sticky bar are unaffected. Verified: exactly one visible `Generate`-labelled button remains inside `<main>` at desktop width (was three DOM instances, one hidden per breakpoint). | P2 | done |
+| 12.52 | ✅ Removed the "live" text beside Generate | `GenerateButton.tsx`'s small `live` badge (shown next to the button label whenever the resolved data mode was live) is gone — one shared component, so this took effect everywhere it appeared at once. The `resolveDataMode` import it needed is removed along with it; the more informative "Live data"/"Sample data" badge overlaid on the rendered card itself (`Canvas.tsx`) is a separate element and was left in place, since it wasn't what was asked to be removed. | P2 | done |
+
+Verified: `npx tsc --noEmit` and `npm run build` clean; a production `next start` sweep (22
+widget preview endpoints) still 200s; a Puppeteer run against a live `GITHUB_TOKEN`
+confirms the theme-click auto-render, reads the server's own cache-hit log line to prove
+no GitHub API call happens on a theme-only change, and confirms the button counts by
+visibility at desktop width — not by inspecting the JSX alone.

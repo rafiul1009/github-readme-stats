@@ -112,6 +112,24 @@ function renderNow(state: DashboardState, nonce: number): RenderedPreview {
   return { src: `${base}?${params.toString()}`, dataMode, widgetType: entry.type };
 }
 
+/**
+ * Applies `patch`, then renders immediately instead of just marking the
+ * canvas dirty — for changes that are navigation/presentation, not a data
+ * edit (docs/TODOS.md 12.50): picking a different widget, or picking a
+ * different theme. A theme swap re-requests the same identifying value under
+ * a new `theme=`, which is a raw-data cache *hit* server-side (the ~30 min
+ * `githubDataCache` is keyed by widget type + username, not by theme) — so
+ * this never re-hits the GitHub API on its own, only re-renders already-
+ * fetched data with a different palette, which is cheap enough to not make
+ * the user ask for it explicitly. Genuine data edits (typing into an option,
+ * clearing the form) still just set `dirty` and wait for Generate.
+ */
+function renderImmediately(state: DashboardState, patch: Partial<DashboardState>): DashboardState {
+  const next: DashboardState = { ...state, ...patch };
+  const nonce = state.renderNonce + 1;
+  return { ...next, dirty: false, renderNonce: nonce, rendered: renderNow(next, nonce) };
+}
+
 export function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
   switch (action.type) {
     case "setMode":
@@ -146,13 +164,11 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
         form[nextEntry.identifyingField] = state.form[nextEntry.identifyingField];
       }
 
-      const next: DashboardState = { ...state, widgetType: action.widgetType, form };
       // Auto-render immediately on switch: live if the carried-over
       // identifying value survived, sample otherwise — never leaves the
       // canvas showing the *previous* widget's card under the new widget's
       // selected name in the sidebar.
-      const nonce = state.renderNonce + 1;
-      return { ...next, dirty: false, renderNonce: nonce, rendered: renderNow(next, nonce) };
+      return renderImmediately(state, { widgetType: action.widgetType, form });
     }
 
     case "setField":
@@ -161,7 +177,11 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
     case "setTheme": {
       const form: FormState = { ...state.form, theme: action.theme };
       for (const key of COLOR_OVERRIDE_KEYS) delete form[key];
-      return { ...state, form, dirty: true, profile: { ...state.profile, theme: action.theme } };
+      // Auto-render immediately (docs/TODOS.md 12.50): a theme is a palette,
+      // not a data change, so it should not need a manual Generate — see
+      // renderImmediately's comment for why this can't turn into unwanted
+      // GitHub API traffic.
+      return renderImmediately(state, { form, profile: { ...state.profile, theme: action.theme } });
     }
 
     case "clearOptions":

@@ -12,10 +12,13 @@ import { fieldValue } from "./query";
 /**
  * The former `/themes` catalog, reduced to a sidebar tab (docs/TODOS.md 12.15).
  *
- * Selecting a theme marks the canvas stale rather than re-rendering: the SVG is
- * generated server-side, so a theme change is a fetch like any other option
- * change, and D11 says fetches happen on Generate. One rule, no exceptions —
- * a "themes are special" carve-out would make the stale indicator a lie.
+ * **Supersedes** this file's earlier "themes fetch on Generate like anything
+ * else" stance. Selecting a theme now re-renders immediately
+ * (`dispatch({ type: "setTheme" })` — see `renderImmediately` in `state.ts`):
+ * a theme is a palette, not a data change, and gating it behind a manual
+ * Generate read as "changing the style calls the GitHub API", which it
+ * never actually needed to (the raw-data cache is keyed by widget+username,
+ * not by theme, so this only ever re-renders already-fetched data).
  */
 export function ThemesPanel() {
   const { state, dispatch, schema } = useDashboard();

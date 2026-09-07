@@ -103,11 +103,6 @@ export function Shell() {
               ) : (
                 <ReadmeCanvas origin={origin} />
               )}
-
-              {/* The second Generate (task 12.10) — always reachable after scrolling the canvas. */}
-              <div className="hidden sm:flex justify-center pt-2 pb-6">
-                <GenerateButton size="lg" />
-              </div>
             </div>
           </ScrollArea>
 
