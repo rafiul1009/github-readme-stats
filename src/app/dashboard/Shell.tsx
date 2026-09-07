@@ -60,7 +60,7 @@ export function Shell() {
           <>
             {/* Widget catalogue — its own docked column (task 12.45). */}
             <aside className="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col border-r bg-sidebar/40">
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-3">
                   <WidgetCatalogPanel />
                 </div>
@@ -69,7 +69,7 @@ export function Shell() {
 
             {/* That widget's options — a second, wider docked column. */}
             <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col border-r bg-sidebar/40">
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0">
                 <div className="p-3">
                   <OptionsPanel />
                 </div>
@@ -78,7 +78,7 @@ export function Shell() {
           </>
         ) : (
           <aside className="hidden lg:flex w-72 xl:w-80 shrink-0 flex-col border-r bg-sidebar/40">
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-3">
                 <ReadmeSidebar />
               </div>
@@ -88,7 +88,7 @@ export function Shell() {
 
         {/* Canvas. */}
         <main className="flex-1 min-w-0 flex flex-col">
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="mx-auto w-full max-w-4xl p-3 sm:p-6 flex flex-col gap-6">
               {state.mode === "widget" ? (
                 <>
@@ -132,7 +132,7 @@ export function Shell() {
               {state.mode === "widget" ? "Widgets & options" : "README contents"}
             </SheetTitle>
           </SheetHeader>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             {/* The Sheet is space-constrained, so mobile keeps both columns
                 stacked in one scroll region rather than the desktop's
                 side-by-side split. */}
@@ -201,7 +201,7 @@ function RightContent() {
         </TabsList>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-3">
           {/* Each panel only mounts while its tab is active, so the gallery's
               ~24 sample renders are not paid for on every dashboard load. */}

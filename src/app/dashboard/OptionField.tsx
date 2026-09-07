@@ -64,13 +64,13 @@ export function OptionField({ name, def, value, onChange, widgetType }: OptionFi
     };
     return (
       <Field label="Badges" description={def.description}>
-        <p className="text-[11px] font-medium text-muted-foreground mb-1.5">User badges</p>
+        <p className="text-[11px] text-muted-foreground mb-1.5">User badges</p>
         <div className="flex gap-1.5 flex-wrap mb-3">
           {USER_BADGE_KEYS.map((key) => (
             <Chip key={key} label={key} active={selected.has(key)} onClick={() => toggle(key)} />
           ))}
         </div>
-        <p className="text-[11px] font-medium text-muted-foreground mb-1.5">
+        <p className="text-[11px] text-muted-foreground mb-1.5">
           Repo badges <span className="opacity-70">(need a `repo`)</span>
         </p>
         <div className="flex gap-1.5 flex-wrap">
@@ -327,7 +327,7 @@ function Field({
 }) {
   return (
     <div className="py-1.5">
-      <Label className="text-xs font-medium capitalize mb-1.5 flex items-center gap-1.5 text-muted-foreground">
+      <Label className="text-xs capitalize mb-1.5 flex items-center gap-1.5 text-muted-foreground">
         {label}
         <Hint text={description} />
       </Label>

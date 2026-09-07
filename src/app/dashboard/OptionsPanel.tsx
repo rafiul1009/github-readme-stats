@@ -32,7 +32,7 @@ export function OptionsPanel() {
     <div className="flex flex-col gap-4">
       {identifyingField && identifyingUi && (
         <div>
-          <Label htmlFor="identifying-field" className="text-xs font-medium mb-1.5 text-muted-foreground">
+          <Label htmlFor="identifying-field" className="text-xs mb-1.5 text-muted-foreground">
             {identifyingUi.label}
           </Label>
           <Input
