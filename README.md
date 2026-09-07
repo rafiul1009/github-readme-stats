@@ -1,13 +1,36 @@
-# github-readme-stats
+# Profilecraft
 
-A customizable widget generator for GitHub profile READMEs. Pick a card, configure it
-in the live builder, and copy the embed — no more hand-editing query strings.
+Craft your GitHub profile README: 22 customizable widgets, 77 themes, badges, tech
+icons, and a full README composer — all from **one dashboard at `/`**.
 
-**[Open the widget builder →](/build)** · **[Build a full README →](/profile)** ·
-**[Browse the gallery →](/gallery)**
+## The dashboard
 
-The widget builder generates one embed at a time. The profile builder composes several
-widgets plus your identity, socials, and tech stack into one complete `README.md`.
+Everything happens on a single page. There is no navigation between building a widget,
+picking a theme, browsing the gallery, and composing a README — those are regions of
+one workspace:
+
+- **Left sidebar** — mode switch (Widget / README), the searchable widget catalogue
+  grouped by tier, and the option accordion (Content · Colours · Layout · Advanced).
+- **Centre** — the rendered widget, a **Generate** button above *and* below it, and the
+  copy-out tabs (Markdown, HTML, auto-dark `<picture>`, URL, JSON, PNG, GitHub Action).
+- **Right sidebar** — Themes and Gallery tabs (plus Templates in README mode).
+
+Below 1280px the right sidebar becomes a drawer; below 1024px so does the left one; on
+a phone the layout is a single column with a sticky Generate bar.
+
+### Nothing renders until you ask
+
+Editing an option changes local state and marks the canvas stale — **no request is made
+per keystroke**. Pressing Generate performs exactly one render, from one of two sources
+chosen by the top-bar toggle:
+
+| Mode | Endpoint | Cost |
+| --- | --- | --- |
+| **Sample** (default) | `/api/widget/<type>/preview` | none — bundled mock data, no username needed |
+| **Live** | `/api/widget/<type>` | one (cached) GitHub API call |
+
+`/build`, `/profile`, `/gallery` and `/themes` redirect into the dashboard, carrying
+their query strings, so existing links keep working.
 
 ## Widgets
 
@@ -231,13 +254,13 @@ APIs — no API key, ever.
 
 ## Gallery
 
-[`/gallery`](/gallery) is a style-taxonomy showcase — Minimal, Vivid, Retro, Animated,
-Badges, Icons, 3D, Ecosystem — of example cards, each rendered from bundled mock data and linking
-straight into the builder pre-configured with that example's widget and options.
+The dashboard's **Gallery** tab is a style-taxonomy showcase — Minimal, Vivid, Retro,
+Animated, Badges, Icons, 3D, Beyond GitHub — of example cards, each rendered from
+bundled mock data. Clicking one loads its widget and options into the canvas.
 
 ## Themes
 
-[`/themes`](/themes) previews all 77 built-in theme presets. Pass any of them as
+The dashboard's **Themes** tab previews all 77 built-in presets. Pass any of them as
 `theme=<name>` on any widget. A second verified batch (37 of the 77) was adopted
 verbatim from [anuraghazra/github-readme-stats](https://github.com/anuraghazra/github-readme-stats)'
 own `themes/index.js` (MIT) — see [NOTICE](NOTICE).
@@ -266,14 +289,14 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:3000/build> or <http://localhost:3000/profile>.
+Then open <http://localhost:3000> — the whole product is on that one page.
 
 ## Delivery modes
 
 1. **Hosted endpoint** (default) — embed the `/api/widget/...` URL directly, as above.
 2. **GitHub Action** — renders the widget on a schedule and commits the SVG into your
    own repo, so your README has zero runtime dependency on this site's uptime. Use the
-   "GitHub Action" tab in the [builder](/build)'s copy-out panel to generate a
+   "Action" tab in the dashboard's copy-out panel to generate a
    ready-to-commit workflow for your specific widget, or start from
    [`examples/github-actions/update-widget.yml`](examples/github-actions/update-widget.yml).
 3. **Self-host** — see below.

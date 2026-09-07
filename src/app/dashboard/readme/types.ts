@@ -1,4 +1,4 @@
-import type { FormState } from "@/app/build/query";
+import type { FormState } from "../query";
 
 /** One configured widget in a profile (task 4.1). */
 export interface WidgetInstance {

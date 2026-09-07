@@ -1,5 +1,5 @@
 import { getWidgetCatalogEntry } from "@/widgets/catalog";
-import { buildQueryString, type FormState } from "@/app/build/query";
+import { buildQueryString, type FormState } from "../query";
 import type { WidgetInstance } from "./types";
 
 /**

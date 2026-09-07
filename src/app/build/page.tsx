@@ -1,10 +1,16 @@
-import { Suspense } from "react";
-import { BuilderClient } from "./BuilderClient";
+import { redirect } from "next/navigation";
+import { buildSearch } from "../_redirect/searchParams";
 
-export default function BuildPage() {
-  return (
-    <Suspense fallback={<div className="p-8 text-sm opacity-70">Loading builder…</div>}>
-      <BuilderClient />
-    </Suspense>
-  );
+/**
+ * `/build` was the standalone widget builder; it is now a mode inside the
+ * dashboard at `/` (docs/TODOS.md 12.22). The whole query string carries over
+ * unchanged — the dashboard reads the same `_widget=` marker and option params
+ * the old builder wrote, so existing deep links land pre-configured.
+ */
+export default async function BuildRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  redirect(`/${buildSearch(await searchParams)}`);
 }

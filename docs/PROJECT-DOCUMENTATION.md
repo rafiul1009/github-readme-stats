@@ -14,21 +14,25 @@
 A Next.js service that renders customizable GitHub profile widgets (streak, stats,
 top-languages, repo/gist pins) as SVG, JSON, or PNG, plus two builder UIs:
 
-> **UI note**: the two-builder, four-route layout described below is being replaced by a
-> single-page dashboard at `/` (PLAN.md §9, TODOS.md Phase 12). Sections 1, 2 and 7 are
-> rewritten as part of task 12.24 once that ships; everything else here — the option
-> schema, theme system, render pipeline, i18n — is unaffected by that phase.
-
-- **`/build`** — configure one widget, preview it live against sample data, copy the
-  embed (Markdown/HTML/`<picture>`/raw URL/JSON/PNG/a GitHub Action workflow).
-- **`/profile`** — compose several widgets plus identity, social badges, and a
-  tech-stack row into one exportable `README.md`.
+- **`/` — the Profilecraft dashboard** (Phase 12). One page, three regions: a left
+  sidebar with the mode switch, widget catalogue and option accordion; a centre canvas
+  with the rendered widget, a Generate button above and below it, and the copy-out tabs
+  (Markdown/HTML/`<picture>`/URL/JSON/PNG/GitHub Action workflow); and a right sidebar
+  with Themes, Gallery, and (in README mode) Templates tabs.
+  - **Widget mode** configures one widget and copies its embed.
+  - **README mode** composes several widgets plus identity, social badges, and a
+    tech-stack row into one exportable `README.md`.
+  - **Rendering is explicit** (PLAN.md D11): option edits mark the canvas stale, and
+    only Generate performs a request — against `/preview` (bundled sample data, the
+    default) or the real GitHub-backed endpoint, per the Sample/Live toggle.
+- **`/build`, `/profile`, `/gallery`, `/themes`** — redirect stubs into the dashboard,
+  preserving their query strings so pre-Phase-12 deep links still resolve.
 
 | Item | Value |
 | --- | --- |
 | Framework | Next.js 15.3.1 (App Router), all routes on the Node runtime (no `edge`) |
 | Language | TypeScript 5.8, strict mode |
-| UI | React 19, Tailwind CSS v4 |
+| UI | React 19, Tailwind CSS v4, shadcn/ui (Radix primitives, vendored into `src/components/ui/`) |
 | Data source | GitHub GraphQL API v4 (`@octokit/graphql`) + REST for gists |
 | Rendering | JSX → real SVG elements via `react-dom/server`'s `renderToStaticMarkup` (not Satori — see PLAN.md §7 D1) |
 | PNG rasterization | `@resvg/resvg-js` (native binary, Node-only, `serverExternalPackages` in next.config.ts) |
@@ -48,9 +52,15 @@ src/
       widget/[type]/preview/route.ts# same widget, bundled mock data, no auth/cache
       streak/route.ts                # back-compat alias -> widget/streak?format=json
       streak-svg/route.ts            # back-compat alias -> widget/streak
-    build/                           # single-widget builder (Pillar A)
-    profile/                         # full-README builder (Pillar B)
-    page.tsx                         # landing page
+    dashboard/                       # the single-page dashboard (Phase 12)
+      context.tsx, state.ts          #   one reducer owning mode/widget/form/theme/dirty
+      Shell.tsx, TopBar.tsx, Canvas.tsx
+      WidgetCatalogPanel.tsx, OptionsPanel.tsx, OptionField.tsx, optionGroups.ts
+      ThemesPanel.tsx, GalleryPanel.tsx, CopyOutPanel.tsx
+      GenerateButton.tsx, DataModeToggle.tsx, permalink.ts
+      readme/                        #   README mode (Pillar B) + its ProfileConfig model
+    build|profile|gallery|themes/    # redirect stubs into the dashboard
+    page.tsx                         # mounts the dashboard
   widgets/<name>/
     index.ts        # registerWidget() call: fetch/compute/render/toJson/mock
     schema.ts        # declarative option schema (client-safe, no server imports)
@@ -66,6 +76,8 @@ src/
     github.ts, githubStats.ts, githubRepo.ts  # GraphQL/REST data fetching
     rank.ts, languages.ts, arc.ts, format.ts, text.ts, escape.ts
   components/card/    # shared JSX primitives: Card, Divider, FadeIn, Ring, RtlMirror, ErrorCard
+  components/ui/      # shadcn/ui components (vendored sources, editable in place)
+  components/brand/   # Logo — the card-stack mark
   utils/streak.ts     # streak-calculation logic (daily/weekly, exclude_days, timezone)
 ```
 
@@ -165,8 +177,8 @@ instances; Phase 10.1 (durable cache) is the documented upgrade path.
 ## 7. Delivery modes
 
 1. **Hosted endpoint** — the default; embed `/api/widget/<type>?...` directly.
-2. **GitHub Action** — `src/app/build/workflowYaml.ts` generates a workflow (exposed as
-   a copy-out tab in `/build`) that curls the widget's SVG on a schedule and commits it
+2. **GitHub Action** — `src/app/dashboard/workflowYaml.ts` generates a workflow (exposed
+   as the "Action" copy-out tab in the dashboard) that curls the widget's SVG on a schedule and commits it
    into the user's own repo, so their README has zero runtime dependency on this
    service's uptime. A filled-in reference copy lives at
    [`examples/github-actions/update-widget.yml`](../examples/github-actions/update-widget.yml).
@@ -179,7 +191,22 @@ instances; Phase 10.1 (durable cache) is the documented upgrade path.
 
 ---
 
-## 8. Known limitations
+## 8. Rendering in a production build
+
+`renderJsxToSvg` imports `renderToStaticMarkup` from `react-dom/server.edge`, and
+`next.config.ts` marks that specifier **external for the server build**. Both halves are
+required, and the second was added in Phase 12 to fix a bug that predated it: route
+handlers compile into React's server-component module graph, so webpack resolves
+`react-dom` with the `react-server` export condition active — and every server subpath
+in react-dom's exports map is gated on it, pointing at a stub that throws
+*"react-dom/server is not supported in React Server Components"*. The result was that
+**every SVG endpoint returned 500 in a production build** while `next dev` rendered
+correctly. Marking the specifier external emits a real runtime `require`, and the
+running Node process does not set that condition. `outputFileTracingIncludes` then
+carries `react-dom` into the standalone output, since an external is invisible to Next's
+dependency tracer. Verified against `next start` and `node .next/standalone/server.js`.
+
+## 9. Known limitations
 
 - **Module-level caches don't survive cold starts** or spread across concurrent
   serverless instances (Phase 10.1 tracks a Vercel KV/Redis upgrade).

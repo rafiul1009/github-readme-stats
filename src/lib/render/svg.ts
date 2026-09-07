@@ -3,16 +3,17 @@ import type { ReactElement } from "react";
 // Next.js's app-router build check that otherwise flags any react-dom/server import
 // reachable from src/app as "importing a component that imports react-dom/server" —
 // it works correctly under the Node runtime too, not just edge.
+//
+// In a *production* build this specifier is additionally marked external in
+// next.config.ts, so webpack emits a real runtime `require` instead of bundling
+// it. Without that, webpack resolves react-dom with the `react-server` export
+// condition active (route handlers live in React's server-component module
+// graph) and every server subpath in react-dom's exports map is gated on it,
+// pointing at a stub that throws "react-dom/server is not supported in React
+// Server Components". See the comment in next.config.ts.
 import { renderToStaticMarkup } from "react-dom/server.edge";
 import { ErrorCard } from "@/components/card/ErrorCard";
 
-/**
- * Serializes a widget's root <svg> JSX element to an SVG document string
- * (docs/PLAN.md §7 D1 — TSX authored as real SVG elements, not Satori).
- * React already understands SVG element/attribute names (viewBox, cx, cy,
- * strokeWidth -> stroke-width, ...), so this is a thin wrapper. A widget's
- * own `renderSvg(data, options)` method calls this to produce its output.
- */
 export function renderJsxToSvg(element: ReactElement): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n${renderToStaticMarkup(element)}`;
 }
