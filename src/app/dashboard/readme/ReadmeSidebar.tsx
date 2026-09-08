@@ -9,7 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useDashboard } from "../context";
 import { OptionField } from "../OptionField";
@@ -243,51 +252,59 @@ function WidgetRow({
               <Settings2 className="size-3.5" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>{entry.label}</DialogTitle>
             </DialogHeader>
 
-            {entry.identifyingField && (
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1.5">
-                  {entry.identifyingField.replace(/_/g, " ")}
-                </Label>
-                <Input
-                  placeholder={
-                    entry.identifyingField === "username" && profile.username
-                      ? `${profile.username} (from the profile)`
-                      : undefined
-                  }
-                  value={instance.identifyingValue}
-                  onChange={(e) => onChange({ ...instance, identifyingValue: e.target.value })}
-                />
-              </div>
-            )}
+            <DialogBody className="flex flex-col gap-4">
+              {entry.identifyingField && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5">
+                    {entry.identifyingField.replace(/_/g, " ")}
+                  </Label>
+                  <Input
+                    placeholder={
+                      entry.identifyingField === "username" && profile.username
+                        ? `${profile.username} (from the profile)`
+                        : undefined
+                    }
+                    value={instance.identifyingValue}
+                    onChange={(e) => onChange({ ...instance, identifyingValue: e.target.value })}
+                  />
+                </div>
+              )}
 
-            <Accordion type="multiple" defaultValue={["content"]}>
-              {OPTION_GROUP_ORDER.filter((k) => groups[k].length > 0).map((key) => (
-                <AccordionItem key={key} value={key}>
-                  <AccordionTrigger className="py-3 text-sm">{OPTION_GROUP_LABELS[key].title}</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex flex-col divide-y divide-border/50">
-                      {groups[key].map((name) => (
-                        <OptionField
-                          key={name}
-                          name={name}
-                          def={entry.schema[name]}
-                          value={fieldValue(entry.schema, instance.options, name)}
-                          onChange={(value) =>
-                            onChange({ ...instance, options: { ...instance.options, [name]: value } })
-                          }
-                          widgetType={entry.type}
-                        />
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+              <Accordion type="multiple" defaultValue={["content"]}>
+                {OPTION_GROUP_ORDER.filter((k) => groups[k].length > 0).map((key) => (
+                  <AccordionItem key={key} value={key}>
+                    <AccordionTrigger className="py-3 text-sm">{OPTION_GROUP_LABELS[key].title}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="flex flex-col divide-y divide-border/50">
+                        {groups[key].map((name) => (
+                          <OptionField
+                            key={name}
+                            name={name}
+                            def={entry.schema[name]}
+                            value={fieldValue(entry.schema, instance.options, name)}
+                            onChange={(value) =>
+                              onChange({ ...instance, options: { ...instance.options, [name]: value } })
+                            }
+                            widgetType={entry.type}
+                          />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </DialogBody>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button>Done</Button>
+              </DialogClose>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
