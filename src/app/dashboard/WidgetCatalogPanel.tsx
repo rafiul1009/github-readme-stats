@@ -80,7 +80,7 @@ export function WidgetCatalogPanel({ bounded = false }: WidgetCatalogPanelProps)
                   )}
                 >
                   {Icon && <Icon className={cn("size-4 shrink-0", active && "text-brand")} />}
-                  <span className="truncate">{entry.label}</span>
+                  <span>{entry.label}</span>
                 </button>
               );
             })}

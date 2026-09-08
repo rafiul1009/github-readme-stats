@@ -48,7 +48,7 @@ export function OptionsPanel() {
       )}
 
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground truncate">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {entry.label} options
         </span>
         <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => dispatch({ type: "clearOptions" })}>

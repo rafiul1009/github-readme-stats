@@ -85,7 +85,7 @@ export function ThemesPanel() {
                   <Check className="absolute right-1 top-1 size-3 text-brand drop-shadow" strokeWidth={3} />
                 )}
               </div>
-              <div className="px-1.5 py-1 truncate text-[10px] text-muted-foreground group-hover:text-foreground">
+              <div className="px-1.5 py-1 text-[10px] text-muted-foreground group-hover:text-foreground">
                 {theme.label}
               </div>
             </button>

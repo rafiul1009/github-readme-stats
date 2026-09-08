@@ -228,7 +228,7 @@ function WidgetRow({
       <div className="flex items-center gap-1.5">
         <GripVertical className="size-3.5 text-muted-foreground/50 shrink-0" />
         {Icon && <Icon className="size-3.5 text-brand shrink-0" />}
-        <span className="text-xs font-medium truncate flex-1">{entry.label}</span>
+        <span className="text-xs font-medium flex-1">{entry.label}</span>
 
         <Button variant="ghost" size="icon" className="size-7" disabled={isFirst} onClick={() => onMove(-1)} aria-label="Move up">
           <ChevronUp className="size-3.5" />
