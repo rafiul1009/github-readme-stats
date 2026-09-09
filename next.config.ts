@@ -13,16 +13,14 @@ const nextConfig: NextConfig = {
    * is no Turbopack-side equivalent to add. An empty-ish `turbopack` key
    * would still leave Next's "Webpack is configured while Turbopack is not"
    * warning firing on every `dev` start (its check is presence-of-config,
-   * not presence-of-a-problem), so `moduleIds` is set here to its own
-   * existing default — a real, valid, no-op turbopack option — purely to
-   * tell Next this file's Turbopack story was considered on purpose. `root`
-   * would have been the more natural choice (sibling project directories one
-   * level up each carry their own lockfile, and normally that risks Next's
-   * root inference walking past this project) but the installed Next
-   * 15.3.1's runtime schema for `turbopack` doesn't accept it yet.
+   * not presence-of-a-problem), so `root` is set here to this project's own
+   * directory — a real, valid turbopack option — purely to tell Next this
+   * file's Turbopack story was considered on purpose. Sibling project
+   * directories one level up each carry their own lockfile, and normally
+   * that risks Next's root inference walking past this project.
    */
   turbopack: {
-    moduleIds: "named",
+    root: __dirname,
   },
   /*
    * Widgets are serialized to SVG with react-dom/server's renderToStaticMarkup

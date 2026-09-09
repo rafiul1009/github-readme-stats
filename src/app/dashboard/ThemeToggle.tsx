@@ -12,6 +12,7 @@ export function ThemeToggle() {
 
   // The resolved theme is unknown on the server, so rendering the real icon
   // before mount would hydrate mismatched.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   return (

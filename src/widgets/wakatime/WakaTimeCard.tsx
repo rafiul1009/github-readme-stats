@@ -88,11 +88,9 @@ export function WakaTimeCard({
     const legendRows = Math.ceil(shown.length / columns);
     const columnWidth = barWidth / columns;
 
-    let cumulative = 0;
-    const segments = shown.map((lang) => {
-      const x = (cumulative / 100) * barWidth;
-      cumulative += lang.percent;
-      return { lang, x, w: (lang.percent / 100) * barWidth };
+    const segments = shown.map((lang, i) => {
+      const priorPercent = shown.slice(0, i).reduce((sum, l) => sum + l.percent, 0);
+      return { lang, x: (priorPercent / 100) * barWidth, w: (lang.percent / 100) * barWidth };
     });
 
     body = (

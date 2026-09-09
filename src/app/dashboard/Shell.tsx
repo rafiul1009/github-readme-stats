@@ -43,6 +43,9 @@ export function Shell() {
   const [rightOpen, setRightOpen] = useState(false);
   const [origin, setOrigin] = useState("");
 
+  // Reads a browser-only value unavailable during SSR; there is no prop or
+  // state to derive it from during render, so it cannot move out of an effect.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOrigin(window.location.origin), []);
 
   // The permalink is written on generate and on structural switches, never per

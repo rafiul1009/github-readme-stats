@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertCircle, ImageIcon, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +15,14 @@ export function Canvas() {
   const { state, entry } = useDashboard();
   const rendered = state.rendered;
   const [load, setLoad] = useState<LoadState>("loading");
+  const [loadedFor, setLoadedFor] = useState(rendered);
 
-  useEffect(() => {
+  // Reset the loading state when a new render comes in, computed during
+  // render (not an effect) per https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  if (rendered !== loadedFor) {
+    setLoadedFor(rendered);
     if (rendered) setLoad("loading");
-  }, [rendered]);
+  }
 
   return (
     <div className="flex flex-col gap-3">
