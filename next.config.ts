@@ -6,7 +6,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@resvg/resvg-js"],
   // Self-host/Docker (docs/TODOS.md 5.9): a standalone build copies only the
   // production dependency subset next actually needs into .next/standalone.
-  output: "standalone",
+  //
+  // Vercel is the exception. Its build runs its own output-file-tracing step
+  // and its onBuildComplete hook reads `.next/next-server.js.nft.json`; a
+  // standalone build relocates that server bundle under `.next/standalone`,
+  // so the hook fails with ENOENT and the deploy dies after a green compile.
+  // Vercel already prunes the deployed function's dependencies itself, so the
+  // standalone output buys nothing there — leave it off and keep it for Docker.
+  output: process.env.VERCEL ? undefined : "standalone",
   /*
    * `next dev --turbopack` never hits the bug the `webpack` block below
    * fixes — that bug is production-build-only (see its comment) — so there
