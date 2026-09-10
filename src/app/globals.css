@@ -179,3 +179,21 @@
     overflow-x: clip;
   }
 }
+
+@layer base {
+  /*
+   * Browsers don't give <button> a pointer cursor by default (only <a href>
+   * gets one natively), which reads as "disabled" on an otherwise-clickable
+   * control. Applied broadly to anything actually clickable; the :disabled /
+   * aria-disabled guards keep genuinely inert controls showing not-allowed.
+   */
+  button:not(:disabled),
+  a[href],
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
