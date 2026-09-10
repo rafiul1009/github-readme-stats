@@ -189,7 +189,8 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
 
     case "loadExample": {
       const form: FormState = {};
-      const schema = getWidgetCatalogEntry(action.widgetType)?.schema ?? {};
+      const nextEntry = getWidgetCatalogEntry(action.widgetType);
+      const schema = nextEntry?.schema ?? {};
       for (const [key, raw] of Object.entries(action.params)) {
         const def = schema[key];
         if (!def) continue;
@@ -197,9 +198,23 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
         else if (def.type === "commaList") form[key] = raw.split(",").filter(Boolean);
         else form[key] = raw;
       }
+      // Gallery examples never carry an identifying value themselves — they
+      // render from bundled mock data (docs/TODOS.md 12.16). But if the user
+      // already has their own username/repo/gist id filled in for a widget
+      // that identifies by the same field, carry it over so the card renders
+      // *their* live data in the picked style instead of the gallery's mock
+      // data (mirrors the carryover in "selectWidget" above).
+      const prevEntry = getWidgetCatalogEntry(state.widgetType);
+      if (
+        nextEntry?.identifyingField &&
+        nextEntry.identifyingField === prevEntry?.identifyingField &&
+        state.form[nextEntry.identifyingField] !== undefined
+      ) {
+        form[nextEntry.identifyingField] = state.form[nextEntry.identifyingField];
+      }
       // Auto-render immediately (docs/TODOS.md 12.50): a gallery pick is
-      // bundled mock data, not a user data edit, so it should show up on the
-      // canvas right away instead of leaving the previous card under the
+      // presentation, not a data edit, so it should show up on the canvas
+      // right away instead of leaving the previous card under the
       // newly-selected example in the sidebar.
       return renderImmediately(state, { widgetType: action.widgetType, form });
     }
