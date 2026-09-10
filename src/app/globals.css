@@ -11,16 +11,18 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   /*
-   * Composed here, not written directly on Geist's own variable, because a
-   * custom property cannot reference itself inside var() — see layout.tsx.
-   * The explicit sans-serif stack after Geist is the actual fix for a serif
-   * fallback ever showing (docs/TODOS.md 12.42): Geist's own next/font
+   * Composed here, not written directly on Space Grotesk's own variable,
+   * because a custom property cannot reference itself inside var() — see
+   * layout.tsx. The explicit sans-serif stack after it is the actual fix for
+   * a serif fallback ever showing (docs/TODOS.md 12.42): next/font's own
    * fallback only guarantees a metrics-matched local font, not the generic
    * `sans-serif` keyword, so without this line a font-loading failure could
    * fall through to the browser/OS default, which on some platforms is serif.
+   * --font-mono shares the same font deliberately (docs/TODOS.md 12.46) —
+   * Space Grotesk is the site's one UI font, sans and mono alike.
    */
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -148,14 +150,15 @@
     @apply border-border outline-ring/50;
   }
   /*
-   * font-sans belongs on body, not html: --font-sans composes --font-geist
-   * (globals.css, above), and next/font's className sets --font-geist on
-   * <body> itself (layout.tsx). A custom property only cascades downward, so
-   * applying font-sans on the ANCESTOR <html> asked it to resolve
-   * --font-geist before that property exists anywhere in scope — the whole
-   * chain went invalid at computed-value time and silently fell back to the
-   * browser's UA default serif font. Verified via computed style before this
-   * fix: `getComputedStyle(document.body).fontFamily === "Times"`.
+   * font-sans belongs on body, not html: --font-sans composes
+   * --font-space-grotesk (globals.css, above), and next/font's className
+   * sets --font-space-grotesk on <body> itself (layout.tsx). A custom
+   * property only cascades downward, so applying font-sans on the ANCESTOR
+   * <html> asked it to resolve --font-space-grotesk before that property
+   * exists anywhere in scope — the whole chain went invalid at
+   * computed-value time and silently fell back to the browser's UA default
+   * serif font. Verified via computed style before this fix:
+   * `getComputedStyle(document.body).fontFamily === "Times"`.
    */
   body {
     @apply bg-background text-foreground font-sans;

@@ -1,22 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Space_Grotesk } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  // Named --font-geist (not --font-sans) so globals.css can compose it with an
-  // explicit sans-serif fallback chain — var() cannot reference the same
-  // custom property it defines, so --font-sans itself has to be a distinct name.
-  variable: "--font-geist",
-  subsets: ["latin"],
-});
-
 const spaceGrotesk = Space_Grotesk({
-  // Replaces Geist Mono (docs/TODOS.md 12.46) — used wherever the dashboard
-  // shows code-shaped text (embed snippets, the color hex input, the raw
-  // README.md). Not a true monospace, but that trade was requested directly.
+  // The site's sole UI font (--font-sans and --font-mono both compose this in
+  // globals.css) — named --font-space-grotesk, not --font-sans, so
+  // globals.css can compose it with an explicit sans-serif fallback chain;
+  // var() cannot reference the same custom property it defines.
   variable: "--font-space-grotesk",
   subsets: ["latin"],
 });
@@ -60,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${spaceGrotesk.variable} antialiased`}>
+      <body className={`${spaceGrotesk.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
           <Toaster position="bottom-right" />

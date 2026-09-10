@@ -1,6 +1,12 @@
 import { COMMON_OPTIONS, mergeSchemas, type InferOptions } from "@/lib/options";
+import { DEFAULT_FONT } from "@/lib/fonts";
 
 export const STATS_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
+  font: {
+    type: "string",
+    description: "Font family used in the card text.",
+    default: DEFAULT_FONT,
+  },
   hide: {
     type: "commaList",
     description: "Hides the specified stat rows: stars, commits, prs, issues, contribs.",

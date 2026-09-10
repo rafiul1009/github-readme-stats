@@ -3,6 +3,7 @@ import { formatNumber } from "@/lib/format";
 import { resolveThemeSlots, type ThemeDefinition } from "@/lib/themes";
 import { normalizeOverrideColor, parseColorValue } from "@/lib/color";
 import { t, isRtlLocale, formatDatePattern, DEFAULT_DATE_FORMAT } from "@/lib/i18n";
+import { DEFAULT_FONT } from "@/lib/fonts";
 
 export interface StreakCardOverrides {
   /** Raw bg_color query value: solid hex/CSS-name, or an "angle,c1,c2,..." gradient. */
@@ -87,7 +88,7 @@ export function StreakCard({
   mode,
   theme,
   overrides = {},
-  font = "Inter",
+  font = DEFAULT_FONT,
   numberFormat = "short",
   locale = "en",
   dateFormat = DEFAULT_DATE_FORMAT,

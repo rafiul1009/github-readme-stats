@@ -6,6 +6,7 @@ import { calculateRank } from "@/lib/rank";
 import { t, isRtlLocale } from "@/lib/i18n";
 import { StatIcon, type StatIconName } from "./icons";
 import type { RawUserStats } from "@/lib/githubStats";
+import { DEFAULT_FONT } from "@/lib/fonts";
 
 export interface StatsCardOverrides {
   background?: string;
@@ -66,7 +67,7 @@ export function StatsCard({
   customTitle,
   theme,
   overrides = {},
-  font = "Inter",
+  font = DEFAULT_FONT,
   numberFormat = "short",
   locale = "en",
   disableAnimations = false,

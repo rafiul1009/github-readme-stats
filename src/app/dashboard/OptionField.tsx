@@ -4,6 +4,7 @@ import type { OptionDef } from "@/lib/options";
 import { WEEKDAY_ABBREVIATIONS } from "@/widgets/streak/schema";
 import { USER_BADGE_KEYS, REPO_BADGE_KEYS } from "@/lib/badges";
 import { LOCALES } from "@/lib/i18n";
+import { FONTS } from "@/lib/fonts";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -97,6 +98,31 @@ export function OptionField({ name, def, value, onChange, widgetType }: OptionFi
             ))}
           </SelectContent>
         </Select>
+      </Field>
+    );
+  }
+
+  if (name === "font") {
+    const stringValue = typeof value === "string" ? value : ((def.default as string) ?? "");
+    const matchesPreset = (FONTS as readonly string[]).includes(stringValue);
+    return (
+      <Field label={label} description={def.description}>
+        <Select value={matchesPreset ? stringValue : "__custom"} onValueChange={(v) => v !== "__custom" && onChange(v)}>
+          <SelectTrigger className="w-full mb-1.5">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FONTS.map((f) => (
+              <SelectItem key={f} value={f}>
+                {f}
+              </SelectItem>
+            ))}
+            <SelectItem value="__custom">Custom font…</SelectItem>
+          </SelectContent>
+        </Select>
+        {!matchesPreset && (
+          <Input placeholder="Font family name" value={stringValue} onChange={(e) => onChange(e.target.value)} />
+        )}
       </Field>
     );
   }

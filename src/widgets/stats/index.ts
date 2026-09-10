@@ -30,6 +30,7 @@ function renderStatsSvg(data: RawUserStats, options: StatsOptions): string {
   return renderJsxToSvg(
     StatsCard({
       stats: data,
+      font: options.font,
       hide: options.hide,
       show: options.show,
       showIcons: options.show_icons,

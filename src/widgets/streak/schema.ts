@@ -1,4 +1,5 @@
 import { COMMON_OPTIONS, mergeSchemas, type InferOptions } from "@/lib/options";
+import { DEFAULT_FONT } from "@/lib/fonts";
 
 export const WEEKDAY_ABBREVIATIONS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -12,7 +13,7 @@ export const STREAK_SCHEMA = mergeSchemas(COMMON_OPTIONS, {
   font: {
     type: "string",
     description: "Font family used in the card text.",
-    default: "Inter",
+    default: DEFAULT_FONT,
   },
   mode: {
     type: "enum",
