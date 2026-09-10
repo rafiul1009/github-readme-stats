@@ -197,7 +197,11 @@ export function dashboardReducer(state: DashboardState, action: DashboardAction)
         else if (def.type === "commaList") form[key] = raw.split(",").filter(Boolean);
         else form[key] = raw;
       }
-      return { ...state, widgetType: action.widgetType, form, dirty: true };
+      // Auto-render immediately (docs/TODOS.md 12.50): a gallery pick is
+      // bundled mock data, not a user data edit, so it should show up on the
+      // canvas right away instead of leaving the previous card under the
+      // newly-selected example in the sidebar.
+      return renderImmediately(state, { widgetType: action.widgetType, form });
     }
 
     case "setProfile":
