@@ -25,6 +25,9 @@
     Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono: var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-sans);
+  /* Applies to every `font-normal` utility (Label, muted counters, etc.) and
+     to body's own baseline weight below — Space Grotesk at 400 reads thin. */
+  --font-weight-normal: 500;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -161,7 +164,7 @@
    * `getComputedStyle(document.body).fontFamily === "Times"`.
    */
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans font-normal;
   }
 }
 
