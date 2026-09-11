@@ -26,13 +26,28 @@ export function TopBar({ onToggleLeft, onToggleRight }: TopBarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:px-4 bg-background/80 backdrop-blur">
-      <Button variant="ghost" size="icon" className="size-9 xl:hidden" aria-label="Toggle menu" onClick={onToggleLeft}>
+      <Button variant="ghost" size="icon" className="size-9 lg:hidden" aria-label="Toggle menu" onClick={onToggleLeft}>
         <PanelLeft className="size-4" />
       </Button>
 
-      <Link href="/" className="flex items-center gap-2 shrink-0" aria-label="Profilecraft home">
+      {/* Below lg the logo sits inline with normal header padding. From lg up it
+          is pulled flush to the header's left edge and widened to match the
+          docked left sidebar (Shell.tsx), so the separator after it lines up
+          with that sidebar's right border. */}
+      <Link href="/" className="flex lg:hidden items-center gap-2 shrink-0" aria-label="Profilecraft home">
         <Logo size={26} />
         <span className="font-semibold tracking-tight hidden sm:inline">Profilecraft</span>
+      </Link>
+      <Link
+        href="/"
+        className={cn(
+          "hidden lg:flex items-center gap-2 shrink-0 lg:-ml-4 lg:pl-4",
+          state.mode === "readme" ? "lg:w-72 xl:w-80" : "lg:w-56 xl:w-64"
+        )}
+        aria-label="Profilecraft home"
+      >
+        <Logo size={26} />
+        <span className="font-semibold tracking-tight">Profilecraft</span>
       </Link>
 
       <Separator orientation="vertical" className="mx-1 h-full hidden sm:block" />
