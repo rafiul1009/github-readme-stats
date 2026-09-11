@@ -35,7 +35,7 @@ export function TopBar({ onToggleLeft, onToggleRight }: TopBarProps) {
         <span className="font-semibold tracking-tight hidden sm:inline">Profilecraft</span>
       </Link>
 
-      <Separator orientation="vertical" className="mx-1 h-6 hidden sm:block" />
+      <Separator orientation="vertical" className="mx-1 h-full hidden sm:block" />
 
       <div role="radiogroup" aria-label="Builder mode" className="inline-flex rounded-lg border bg-muted/40 p-0.5">
         {MODES.map(({ value, label, icon: Icon }) => {
